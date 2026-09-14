@@ -439,6 +439,101 @@ export const EARLY_ROAD_DISTANCES: EarlyRoadDistance[] = [
   }
 ];
 
+import { ScanGridTile } from '../types';
+
+export const INITIAL_GRID_TILES: ScanGridTile[] = [
+  {
+    id: 'grid-p-01',
+    code: 'GRID-P-01',
+    bounds: { north: 38.53, south: 38.48, west: -87.35, east: -87.30 },
+    center: { lat: 38.505, lng: -87.325 },
+    status: 'scanned',
+    anomaliesFoundCount: 2,
+    lastScannedTime: '4 hours ago',
+    scanProgressPercent: 100
+  },
+  {
+    id: 'grid-p-02',
+    code: 'GRID-P-02 (Petersburg Core)',
+    bounds: { north: 38.53, south: 38.48, west: -87.30, east: -87.25 },
+    center: { lat: 38.505, lng: -87.275 },
+    status: 'scanned',
+    anomaliesFoundCount: 4,
+    lastScannedTime: '2 hours ago',
+    scanProgressPercent: 100
+  },
+  {
+    id: 'grid-p-03',
+    code: 'GRID-P-03 (Highbanks Bluff)',
+    bounds: { north: 38.53, south: 38.48, west: -87.25, east: -87.20 },
+    center: { lat: 38.505, lng: -87.225 },
+    status: 'scanning',
+    anomaliesFoundCount: 1,
+    lastScannedTime: 'In progress',
+    nextScheduledScanTime: 'Active now (Grokbot VM-02)',
+    scanProgressPercent: 68
+  },
+  {
+    id: 'grid-p-04',
+    code: 'GRID-P-04 (Decker Ferry / White River)',
+    bounds: { north: 38.53, south: 38.48, west: -87.20, east: -87.15 },
+    center: { lat: 38.505, lng: -87.175 },
+    status: 'queued',
+    anomaliesFoundCount: 0,
+    nextScheduledScanTime: 'In 3 hours (Queued #1)',
+    scanProgressPercent: 0
+  },
+  {
+    id: 'grid-p-05',
+    code: 'GRID-P-05 (Washington Twp West)',
+    bounds: { north: 38.48, south: 38.43, west: -87.35, east: -87.30 },
+    center: { lat: 38.455, lng: -87.325 },
+    status: 'scanned',
+    anomaliesFoundCount: 1,
+    lastScannedTime: '8 hours ago',
+    scanProgressPercent: 100
+  },
+  {
+    id: 'grid-p-06',
+    code: 'GRID-P-06 (Pride Creek Basin)',
+    bounds: { north: 38.48, south: 38.43, west: -87.30, east: -87.25 },
+    center: { lat: 38.455, lng: -87.275 },
+    status: 'scanned',
+    anomaliesFoundCount: 2,
+    lastScannedTime: '12 hours ago',
+    scanProgressPercent: 100
+  },
+  {
+    id: 'grid-p-07',
+    code: 'GRID-P-07 (Patoka River Basin)',
+    bounds: { north: 38.43, south: 38.38, west: -87.25, east: -87.20 },
+    center: { lat: 38.405, lng: -87.225 },
+    status: 'queued',
+    anomaliesFoundCount: 0,
+    nextScheduledScanTime: 'In 7 hours (Queued #2)',
+    scanProgressPercent: 0
+  },
+  {
+    id: 'grid-p-08',
+    code: 'GRID-P-08 (Winslow Mill Reach)',
+    bounds: { north: 38.43, south: 38.38, west: -87.20, east: -87.15 },
+    center: { lat: 38.405, lng: -87.175 },
+    status: 'scanned',
+    anomaliesFoundCount: 1,
+    lastScannedTime: '16 hours ago',
+    scanProgressPercent: 100
+  },
+  {
+    id: 'grid-p-09',
+    code: 'GRID-P-09 (Snake Knob / Lockhart)',
+    bounds: { north: 38.35, south: 38.30, west: -87.28, east: -87.20 },
+    center: { lat: 38.325, lng: -87.240 },
+    status: 'unscanned',
+    anomaliesFoundCount: 0,
+    scanProgressPercent: 0
+  }
+];
+
 export const HISTORICAL_CHRONICLE_ACTS: HistoricalAct[] = [
   {
     actNumber: 'I',
