@@ -1,0 +1,41 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "tile_01",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-87.2300, 38.4000],
+          [-87.2200, 38.4000],
+          [-87.2200, 38.4100],
+          [-87.2300, 38.4100],
+          [-87.2300, 38.4000]
+        ]]
+      },
+      "properties": {
+        "name": "Winslow Tile 01",
+        "status": "completed"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "tile_02",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-87.2200, 38.4000],
+          [-87.2100, 38.4000],
+          [-87.2100, 38.4100],
+          [-87.2200, 38.4100],
+          [-87.2200, 38.4000]
+        ]]
+      },
+      "properties": {
+        "name": "Winslow Tile 02",
+        "status": "pending"
+      }
+    }
+  ]
+}
