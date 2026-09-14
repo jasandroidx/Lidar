@@ -1,0 +1,10 @@
+{
+  "name": "Pike Terrain Radar PWA",
+  "description": "Field GPS navigation and real-time LiDAR canopy-peel radar for locating pioneer cellar holes, historic traces, and 1885 Goodspeed homesteads in Pike County, Indiana.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="radarBg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#0f2b26" />
+      <stop offset="70%" stop-color="#081714" />
+      <stop offset="100%" stop-color="#030a08" />
+    </radialGradient>
+    <linearGradient id="lidarGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="50%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background rounded canvas -->
+  <rect width="512" height="512" rx="96" fill="url(#radarBg)" stroke="#10b981" stroke-width="4" stroke-opacity="0.4"/>
+
+  <!-- Topographic elevation contours -->
+  <g fill="none" stroke="#10b981" stroke-opacity="0.25" stroke-width="2">
+    <path d="M 64 220 C 140 190 190 240 260 210 C 330 180 400 240 448 200" />
+    <path d="M 64 270 C 130 240 180 300 270 260 C 350 220 420 280 448 250" />
+    <path d="M 64 320 C 120 290 200 340 290 300 C 370 270 410 330 448 310" />
+    <path d="M 64 370 C 150 350 210 380 310 350 C 380 320 420 370 448 360" />
+  </g>
+
+  <!-- Radar Scope Circles -->
+  <circle cx="256" cy="256" r="190" fill="none" stroke="#10b981" stroke-width="2.5" stroke-opacity="0.4" />
+  <circle cx="256" cy="256" r="130" fill="none" stroke="#10b981" stroke-width="1.5" stroke-opacity="0.5" stroke-dasharray="4 6" />
+  <circle cx="256" cy="256" r="70" fill="none" stroke="#10b981" stroke-width="2" stroke-opacity="0.6" />
+  <circle cx="256" cy="256" r="16" fill="#10b981" fill-opacity="0.3" stroke="#34d399" stroke-width="2" />
+
+  <!-- Compass Crosshairs / Degree ticks -->
+  <line x1="256" y1="56" x2="256" y2="456" stroke="#10b981" stroke-width="1.5" stroke-opacity="0.4" stroke-dasharray="8 6" />
+  <line x1="56" y1="256" x2="456" y2="256" stroke="#10b981" stroke-width="1.5" stroke-opacity="0.4" stroke-dasharray="8 6" />
+  
+  <!-- Radar Sweep Cone -->
+  <path d="M 256 256 L 390 122 A 190 190 0 0 0 256 66 Z" fill="url(#lidarGlow)" fill-opacity="0.18" />
+
+  <!-- Cellar Hole Target Anomaly (square depression with stones) -->
+  <g transform="translate(320, 160)" filter="url(#glow)">
+    <!-- Cellar hole rectangular outline -->
+    <rect x="-24" y="-24" width="48" height="48" rx="4" fill="#0284c7" fill-opacity="0.4" stroke="#38bdf8" stroke-width="3" />
+    <circle cx="0" cy="0" r="6" fill="#38bdf8" />
+    <!-- Reticle brackets -->
+    <path d="M -32 -16 L -32 -32 L -16 -32" fill="none" stroke="#38bdf8" stroke-width="2" />
+    <path d="M 16 -32 L 32 -32 L 32 -16" fill="none" stroke="#38bdf8" stroke-width="2" />
+    <path d="M 32 16 L 32 32 L 16 32" fill="none" stroke="#38bdf8" stroke-width="2" />
+    <path d="M -16 32 L -32 32 L -32 16" fill="none" stroke="#38bdf8" stroke-width="2" />
+  </g>
+
+  <!-- Pulsing GPS Beacon (Location) -->
+  <g transform="translate(190, 310)" filter="url(#glow)">
+    <circle cx="0" cy="0" r="22" fill="#0284c7" fill-opacity="0.25">
+      <animate attributeName="r" values="10;32;10" dur="2s" repeatCount="indefinite" />
+      <animate attributeName="opacity" values="0.8;0.1;0.8" dur="2s" repeatCount="indefinite" />
+    </circle>
+    <circle cx="0" cy="0" r="10" fill="#38bdf8" stroke="#ffffff" stroke-width="2.5" />
+    <circle cx="0" cy="0" r="3" fill="#ffffff" />
+  </g>
+
+  <!-- Footsteps trail connecting -->
+  <path d="M 190 310 Q 240 280 270 230 T 320 160" fill="none" stroke="#38bdf8" stroke-width="2" stroke-dasharray="4 6" stroke-opacity="0.7" />
+
+  <!-- Historic Compass Cardinal Marks -->
+  <text x="256" y="44" fill="#34d399" font-family="monospace" font-size="16" font-weight="bold" text-anchor="middle">N 000°</text>
+  <text x="472" y="261" fill="#34d399" font-family="monospace" font-size="14" text-anchor="start">E 090°</text>
+  <text x="256" y="482" fill="#34d399" font-family="monospace" font-size="14" text-anchor="middle">S 180°</text>
+  <text x="40" y="261" fill="#34d399" font-family="monospace" font-size="14" text-anchor="end">W 270°</text>
+  
+  <!-- Banner Label -->
+  <rect x="136" y="416" width="240" height="34" rx="8" fill="#041f1a" stroke="#10b981" stroke-width="1.5" />
+  <text x="256" y="439" fill="#10b981" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="800" letter-spacing="3" text-anchor="middle">PIKE RADAR</text>
+</svg>
