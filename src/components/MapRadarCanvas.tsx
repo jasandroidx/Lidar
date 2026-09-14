@@ -1,23 +1,28 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 import {
-  Layers,
-  ZoomIn,
-  ZoomOut,
   Navigation,
   Crosshair,
+  Play,
+  Pause,
+  ZoomIn,
+  ZoomOut,
+  Layers,
   TreePine,
   Mountain,
-  Sliders,
-  Play,
-  Pause
+  Grid,
+  Sparkles,
+  Info,
+  CheckCircle2,
+  Clock,
+  AlertCircle
 } from 'lucide-react';
 import {
   TerrainTarget,
   LiDARShaderMode,
   GPSCoordinate,
-  FootstepBreadcrumb
+  FootstepBreadcrumb,
+  ScanGridTile
 } from '../types';
 import { PIKE_CENTER_COORDS } from '../data/historicalData';
 import { playAudioFeedback, triggerHaptic } from '../utils/hapticsAndAudio';
@@ -39,40 +44,11 @@ interface MapRadarCanvasProps {
   onAddBreadcrumb?: (point: FootstepBreadcrumb) => void;
   isSimulatingWalk: boolean;
   onToggleSimulateWalk: () => void;
-  gridTiles?: ScanGridTile[];
-  onQueueGridTile?: (tileId: string) => void;
+  gridTiles: ScanGridTile[];
+  onQueueGridTile: (tileId: string) => void;
 }
 
-// Andrew's Monotone Chain Convex Hull algorithm
-function getConvexHull(pts: [number, number][]): [number, number][] {
-  if (pts.length <= 3) return pts;
-
-  const sorted = [...pts].sort((a, b) => (a[0] === b[0] ? a[1] - b[1] : a[0] - b[0]));
-
-  const cross = (o: [number, number], a: [number, number], b: [number, number]) =>
-    (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
-
-  const lower: [number, number][] = [];
-  for (const p of sorted) {
-    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) {
-      lower.pop();
-    }
-    lower.push(p);
-  }
-
-  const upper: [number, number][] = [];
-  for (let i = sorted.length - 1; i >= 0; i--) {
-    const p = sorted[i];
-    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) {
-      upper.pop();
-    }
-    upper.push(p);
-  }
-
-  upper.pop();
-  lower.pop();
-  return lower.concat(upper);
-}
+type BaseMapType = 'esri_satellite' | 'osm_street' | 'usgs_topo';
 
 export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
   targets,
@@ -84,7 +60,9 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
   peelPercent,
   onPeelChange,
   isSimulatingWalk,
-  onToggleSimulateWalk
+  onToggleSimulateWalk,
+  gridTiles,
+  onQueueGridTile
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -178,6 +156,7 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
         hullsGroup.addLayer(hull);
       }
     });
+  }, [targets, selectedTarget, onSelectTarget]);
 
     // Render individual Candidate Circle Markers with multi-attribute styling
     targets.forEach((t) => {
@@ -246,7 +225,6 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
     }
   }, [userGps]);
 
-  // Center on GPS
   const handleCenterGps = () => {
     playAudioFeedback('ping');
     triggerHaptic([20, 20]);
@@ -278,10 +256,8 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
               playAudioFeedback('peel');
               onPeelChange(0);
             }}
-            className={`px-2.5 py-1 rounded-lg text-[10px] font-mono-tech transition ${
-              peelPercent === 0
-                ? 'bg-cyan-600 text-white font-bold'
-                : 'text-stone-300 hover:bg-white/10'
+            className={`px-2 py-1 rounded-lg text-[10px] font-mono-tech transition ${
+              peelPercent === 0 ? 'bg-cyan-600 text-white font-bold' : 'text-stone-300 hover:bg-white/10'
             }`}
           >
             PURE LiDAR (100%)
@@ -291,28 +267,23 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
               playAudioFeedback('peel');
               onPeelChange(50);
             }}
-            className={`px-2.5 py-1 rounded-lg text-[10px] font-mono-tech transition ${
-              peelPercent === 50
-                ? 'bg-emerald-600 text-white font-bold'
-                : 'text-stone-300 hover:bg-white/10'
+            className={`px-2 py-1 rounded-lg text-[10px] font-mono-tech transition ${
+              peelPercent === 50 ? 'bg-emerald-600 text-white font-bold' : 'text-stone-300 hover:bg-white/10'
             }`}
           >
-            50/50 WIPE
+            50/50
           </button>
           <button
             onClick={() => {
               playAudioFeedback('peel');
               onPeelChange(100);
             }}
-            className={`px-2.5 py-1 rounded-lg text-[10px] font-mono-tech transition ${
-              peelPercent === 100
-                ? 'bg-emerald-800 text-white font-bold'
-                : 'text-stone-300 hover:bg-white/10'
+            className={`px-2 py-1 rounded-lg text-[10px] font-mono-tech transition ${
+              peelPercent === 100 ? 'bg-emerald-800 text-white font-bold' : 'text-stone-300 hover:bg-white/10'
             }`}
           >
             CANOPY (ESRI)
           </button>
-        </div>
 
         {/* Dynamic Opacity Slider Controls */}
         <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/75 border border-cyan-900/60 backdrop-blur-md pointer-events-auto text-[11px] font-mono-tech text-cyan-300 shadow-2xl">
@@ -376,23 +347,23 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
               ? 'bg-amber-600 text-white border-amber-400 animate-pulse'
               : 'bg-stone-900/80 text-stone-300 border-stone-700 hover:text-white'
           }`}
-          title="Simulate Field Walk"
+          title={isSimulatingWalk ? 'Pause Virtual Walk Simulation' : 'Simulate Field Walk'}
         >
           {isSimulatingWalk ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 text-amber-400" />}
         </button>
 
         <button
           onClick={handleZoomIn}
+          onClick={() => handleZoom(1)}
           className="p-2.5 rounded-xl bg-stone-900/80 border border-stone-700 text-stone-300 hover:text-white shadow-xl backdrop-blur-md transition active:scale-95"
-          title="Zoom In"
         >
           <ZoomIn className="w-4 h-4" />
         </button>
 
         <button
           onClick={handleZoomOut}
+          onClick={() => handleZoom(-1)}
           className="p-2.5 rounded-xl bg-stone-900/80 border border-stone-700 text-stone-300 hover:text-white shadow-xl backdrop-blur-md transition active:scale-95"
-          title="Zoom Out"
         >
           <ZoomOut className="w-4 h-4" />
         </button>
