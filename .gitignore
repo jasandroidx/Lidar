@@ -4,5 +4,8 @@ dist/
 coverage/
 .DS_Store
 *.log
+__pycache__/
+*.pyc
+reviews.db
 .env*
 !.env.example

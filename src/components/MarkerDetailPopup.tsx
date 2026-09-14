@@ -17,7 +17,7 @@ import {
   Clock
 } from 'lucide-react';
 import { TerrainTarget, VerificationStatus } from '../types';
-import { HistoricalIllustration } from './HistoricalIllustrations';
+import { ElevationProfile } from './ElevationProfile';
 import { triggerHaptic, playAudioFeedback } from '../utils/hapticsAndAudio';
 import { copyObsidianToClipboard, downloadObsidianMarkdown, getObsidianDeepLink } from '../utils/obsidianExporter';
 import { downloadGPXFile } from '../utils/gpxExporter';
@@ -190,11 +190,6 @@ export const MarkerDetailPopup: React.FC<MarkerDetailPopupProps> = ({
         <div className="flex-1 p-5 overflow-y-auto space-y-4 text-stone-200">
           {activeTab === 'history' && (
             <div className="space-y-4">
-              {/* Archival Woodcut / Diagram */}
-              <div className="rounded-xl overflow-hidden border border-emerald-500/30 bg-stone-950 shadow-inner">
-                <HistoricalIllustration category={target.category} className="w-full h-44 sm:h-48" />
-              </div>
-
               {/* Authentic Goodspeed Citation Banner */}
               <div className="p-3 rounded-lg bg-amber-950/30 border border-amber-500/30 text-xs">
                 <div className="flex items-center justify-between text-amber-300 font-mono-tech font-semibold mb-1">
@@ -232,13 +227,14 @@ export const MarkerDetailPopup: React.FC<MarkerDetailPopupProps> = ({
 
           {activeTab === 'lidar' && (
             <div className="space-y-4">
-              <div className="p-4 rounded-xl bg-[#091e19] border border-cyan-500/30">
+              <div className="p-4 rounded-xl bg-[#091e19] border border-cyan-500/30 space-y-3">
                 <h3 className="text-xs font-mono-tech text-cyan-400 font-semibold tracking-wide uppercase mb-1">
                   LiDAR Ground Surface Interpretation
                 </h3>
                 <p className="text-sm text-stone-200 leading-relaxed font-sans-ui">
                   {target.anomalyDescription}
                 </p>
+                <ElevationProfile dimensions={target.dimensionsFeet} />
               </div>
 
               <div className="space-y-2">
