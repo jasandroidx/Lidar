@@ -232,7 +232,7 @@ export const MarkerDetailPopup: React.FC<MarkerDetailPopupProps> = ({
                   LiDAR Ground Surface Interpretation
                 </h3>
                 <p className="text-sm text-stone-200 leading-relaxed font-sans-ui">
-                  {target.anomalyDescription}
+                  {target.anomalyDescription ?? 'No detector run or site visit on record for this target yet.'}
                 </p>
                 <ElevationProfile dimensions={target.dimensionsFeet} />
               </div>
@@ -242,7 +242,7 @@ export const MarkerDetailPopup: React.FC<MarkerDetailPopupProps> = ({
                   Targeted Micro-Relief Signatures:
                 </h4>
                 <div className="space-y-2">
-                  {target.lidarFeatures.map((feat, idx) => (
+                  {(target.lidarFeatures ?? []).map((feat, idx) => (
                     <div
                       key={idx}
                       className="flex items-start gap-2.5 p-2.5 rounded-lg bg-[#061814] border border-emerald-900/50 text-xs"
@@ -322,7 +322,7 @@ export const MarkerDetailPopup: React.FC<MarkerDetailPopupProps> = ({
               <div className="p-3.5 rounded-xl bg-[#091e19]/60 border border-emerald-900/40 space-y-1.5">
                 <span className="text-[11px] font-mono-tech uppercase text-stone-400">Current Field Notes:</span>
                 <p className="text-xs text-stone-200 italic font-mono-tech bg-black/40 p-2.5 rounded-lg border border-stone-800">
-                  {target.fieldNotes}
+                  {target.fieldNotes ?? 'No field notes. Nobody has walked this one.'}
                 </p>
               </div>
 

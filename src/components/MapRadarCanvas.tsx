@@ -27,7 +27,28 @@ import {
 import { PIKE_CENTER_COORDS } from '../data/historicalData';
 import { playAudioFeedback, triggerHaptic } from '../utils/hapticsAndAudio';
 
-import { ScanGridTile } from '../types';
+
+/**
+ * Monotone chain convex hull. Wraps a homestead cluster's points in the
+ * tightest polygon that contains them. Was being called but never defined --
+ * cluster hulls blew up at runtime.
+ */
+function getConvexHull(pts: [number, number][]): [number, number][] {
+  if (pts.length < 3) return pts;
+  const p = [...pts].sort((a, b) => (a[0] - b[0]) || (a[1] - b[1]));
+  const cross = (o: [number, number], a: [number, number], b: [number, number]) =>
+    (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const build = (src: [number, number][]) => {
+    const out: [number, number][] = [];
+    for (const q of src) {
+      while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], q) <= 0) out.pop();
+      out.push(q);
+    }
+    out.pop();
+    return out;
+  };
+  return [...build(p), ...build([...p].reverse())];
+}
 
 interface MapRadarCanvasProps {
   targets: TerrainTarget[];
@@ -66,7 +87,7 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
-  const overlayLayerRef = useRef<L.ImageOverlay | null>(null);
+  const overlayLayerRef = useRef<L.TileLayer | null>(null);
   const markersGroupRef = useRef<L.LayerGroup | null>(null);
   const hullsGroupRef = useRef<L.LayerGroup | null>(null);
   const gpsMarkerRef = useRef<L.CircleMarker | null>(null);
@@ -92,14 +113,19 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
       }
     ).addTo(map);
 
-    // Local Relief Model (LRM) LiDAR drape overlay
-    const bounds: L.LatLngBoundsExpression = [
-      [38.3950, -87.2350],
-      [38.4150, -87.2050]
-    ];
-    const overlay = L.imageOverlay('/lrm_overlay.png', bounds, {
+    // Local Relief Model (LRM) drape -- a real XYZ pyramid, county-wide.
+    // Was a single lrm_overlay.png pinned to a hardcoded bbox, which covered
+    // about one square mile out of 336. Generate tiles with
+    //   python3 tools/make_lrm_tiles.py --dtm-dir <dtms> --out public/lrm_tiles
+    const overlay = L.tileLayer('/lrm_tiles/{z}/{x}/{y}.png', {
       opacity: (100 - peelPercent) / 100,
-      interactive: false
+      minNativeZoom: 14,
+      maxNativeZoom: 18,
+      maxZoom: 21,
+      tms: false,
+      // tiles only exist where a DTM has been processed; missing is normal
+      errorTileUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      attribution: 'LRM derived from Purdue GDSL / Indiana QL2 LiDAR'
     }).addTo(map);
 
     overlayLayerRef.current = overlay;
@@ -158,6 +184,12 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
     });
   }, [targets, selectedTarget, onSelectTarget]);
 
+
+  // 2b. Render individual Candidate Circle Markers
+  useEffect(() => {
+    const map = mapRef.current;
+    const markersGroup = markersGroupRef.current;
+    if (!map || !markersGroup) return;
     // Render individual Candidate Circle Markers with multi-attribute styling
     targets.forEach((t) => {
       const isSelected = selectedTarget?.id === t.id;
@@ -354,7 +386,6 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
 
         <button
           onClick={handleZoomIn}
-          onClick={() => handleZoom(1)}
           className="p-2.5 rounded-xl bg-stone-900/80 border border-stone-700 text-stone-300 hover:text-white shadow-xl backdrop-blur-md transition active:scale-95"
         >
           <ZoomIn className="w-4 h-4" />
@@ -362,12 +393,12 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
 
         <button
           onClick={handleZoomOut}
-          onClick={() => handleZoom(-1)}
           className="p-2.5 rounded-xl bg-stone-900/80 border border-stone-700 text-stone-300 hover:text-white shadow-xl backdrop-blur-md transition active:scale-95"
         >
           <ZoomOut className="w-4 h-4" />
         </button>
       </div>
+    </div>
     </div>
   );
 };

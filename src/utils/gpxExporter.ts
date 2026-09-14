@@ -39,7 +39,7 @@ export function generateGPXContent(
     <ele>${t.elevationMeters}</ele>
     <time>${timestamp}</time>
     <name>${escapeXml(t.name)}</name>
-    <desc>${escapeXml(`[${t.verificationStatus.toUpperCase()}] ${t.chronicleSummary} | Anomaly: ${t.anomalyDescription} | Citation: ${t.goodspeedCitation}`)}</desc>
+    <desc>${escapeXml(`[${t.verificationStatus.toUpperCase()}] ${t.chronicleSummary} | Anomaly: ${t.anomalyDescription ?? 'unsurveyed'} | Citation: ${t.goodspeedCitation}`)}</desc>
     <sym>${sym}</sym>
     <type>${t.category}</type>
     <extensions>
@@ -47,7 +47,7 @@ export function generateGPXContent(
       <pioneerFamily>${escapeXml(t.pioneerFamily)}</pioneerFamily>
       <verificationStatus>${t.verificationStatus}</verificationStatus>
       <dimensions>${escapeXml(t.dimensionsFeet)}</dimensions>
-      <fieldNotes>${escapeXml(t.fieldNotes)}</fieldNotes>
+      <fieldNotes>${escapeXml(t.fieldNotes ?? '')}</fieldNotes>
     </extensions>
   </wpt>
 `;

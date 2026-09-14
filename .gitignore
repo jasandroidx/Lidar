@@ -9,3 +9,18 @@ __pycache__/
 reviews.db
 .env*
 !.env.example
+
+# --- site coordinates stay private. code public, locations private. ---
+*.geojson
+!grid.geojson
+chips/
+crops/
+anomaly_crops/
+candidates*.json
+candidates*.geojson
+dossiers/
+*.img
+*.las
+
+# generated LRM pyramid -- rebuild with tools/make_lrm_tiles.py
+public/lrm_tiles/

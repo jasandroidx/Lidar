@@ -7,7 +7,7 @@ import {
 
 export const PIKE_CENTER_COORDS = {
   latitude: 38.4912,
-  longitude: -87.2798,
+  longitude: -87.2798
 };
 
 export const INITIAL_HISTORICAL_TARGETS: TerrainTarget[] = [
@@ -25,16 +25,8 @@ export const INITIAL_HISTORICAL_TARGETS: TerrainTarget[] = [
     goodspeedPage: 251,
     pioneerFamily: 'Pride Family (Woolsey & William)',
     chronicleSummary: 'First white settlement in Pike County (1800) at White Oak Springs. In 1807, during rising Indian tensions prior to the War of 1812, Pride erected the fortified two-story hewed-log blockhouse where early families gathered for defense.',
-    anomalyDescription: 'LiDAR bare-earth relief indicates rectangular foundation depression (approx 32×24 ft) with stone chimney footing rubble at western edge, adjacent to the historic White Oak spring head.',
-    lidarFeatures: [
-      'Sub-surface rectangular perimeter trench',
-      'Compact sandstone foundation corners',
-      'Depression of historic spring run to Pride’s Creek',
-      'Faint wagon rut approach from the Vincennes Trace'
-    ],
-    verificationStatus: 'confirmed',
-    fieldNotes: 'Large moss-covered sandstone blocks visible at NW corner beneath 18 inches of deciduous humus. Water still seeps at base of slope.',
-    confirmedDate: '1885 Record Verified'
+    verificationStatus: 'unverified',
+    citationVerified: false,
   },
   {
     id: 'target-brenton-1817',
@@ -50,14 +42,8 @@ export const INITIAL_HISTORICAL_TARGETS: TerrainTarget[] = [
     goodspeedPage: 277,
     pioneerFamily: 'Brenton Family (Peter & James)',
     chronicleSummary: 'Peter Brenton donated the 112-acre parcel establishing Petersburg in 1817. Built of hewed logs by Thomas C. Stewart ($599.75). Adjacent jail had double walls filled with upright timbers.',
-    anomalyDescription: 'Sub-surface cellar footprint with distinct corner stone alignments and remnants of the 1817 public whipping post / pillory ground works.',
-    lidarFeatures: [
-      'Double rectangular foundation signature',
-      'Packed stone sill footprint beneath topsoil',
-      'Old public square lot 107 boundary trace'
-    ],
     verificationStatus: 'unverified',
-    fieldNotes: 'Sub-surface ground radar anomalies align with 1817 plat survey by Hosea Smith.'
+    citationVerified: false,
   },
   {
     id: 'target-miley-mill-1824',
@@ -73,14 +59,8 @@ export const INITIAL_HISTORICAL_TARGETS: TerrainTarget[] = [
     goodspeedPage: 255,
     pioneerFamily: 'Miley Family (Henry & David)',
     chronicleSummary: 'The first mill in Pike County. A two-horse mill processing 35 bushels per day. Pioneers came from 20 miles away and camped outside for 36 hours. Introduced the first bolting cloth in the county.',
-    anomalyDescription: 'Channel depression and circular horse-sweep turning floor depression revealed clearly once forest canopy is peeled away.',
-    lidarFeatures: [
-      'Circular compacted tread ring (38 ft diameter)',
-      'Dry earthen sluice embankment into creek bottom',
-      'Buried hearth foundation from overnight pioneer camp'
-    ],
     verificationStatus: 'unverified',
-    fieldNotes: 'Canopy wipe reveals distinct circular trench and race leading toward Patoka tributary.'
+    citationVerified: false,
   },
   {
     id: 'target-youngman-distillery',
@@ -96,14 +76,8 @@ export const INITIAL_HISTORICAL_TARGETS: TerrainTarget[] = [
     goodspeedPage: 256,
     pioneerFamily: 'Youngman / Graham',
     chronicleSummary: 'Licensed to make 1 barrel/day at 10–12.5¢/gallon. Burned in 1831 during which streams of fiery liquor flowed down gullies while locals dipped straws into the rivulets.',
-    anomalyDescription: 'Rectangular subterranean cellar pit with heat-annealed clay signature and runoff channel down to Pride’s Creek.',
-    lidarFeatures: [
-      'Square sunken still floor with 1.4m depth relief',
-      'Burn-layer soil compaction anomaly',
-      'Spring-fed intake trough trace'
-    ],
     verificationStatus: 'unverified',
-    fieldNotes: 'Need ground probe to test for heat-hardened brick and charcoal stratum noted in 1831 fire.'
+    citationVerified: false,
   },
   {
     id: 'target-siple-mound',
@@ -111,22 +85,17 @@ export const INITIAL_HISTORICAL_TARGETS: TerrainTarget[] = [
     category: 'prehistoric_mound',
     township: 'Clay / Washington',
     yearSettled: 1820,
-    latitude: 38.4985,
-    longitude: -87.3142,
+    latitude: 38.5,
+    longitude: -87.31,
     elevationMeters: 168,
     dimensionsFeet: 'Base 150 ft × 90 ft; Height 35 ft',
     goodspeedCitation: 'Goodspeed (1885), pp. 271, 276',
     goodspeedPage: 276,
     pioneerFamily: 'Siple / Oborn / Stuckey',
     chronicleSummary: 'Massive earthen causeway mole projecting from bluffs over White River. In 1850s, excavators uncovered three giant skeletons with flat stone slabs resting on chest and head.',
-    anomalyDescription: 'Large geometric earthwork with steep artificial rounded slopes, connecting mole ramp, and summit ceremonial terrace.',
-    lidarFeatures: [
-      'Abrupt 35-foot artificial elevation prominence',
-      'Linear earthen mole connecting summit to natural ridge',
-      'Prehistoric ditch and water-diversion channel'
-    ],
-    verificationStatus: 'confirmed',
-    fieldNotes: 'LiDAR micro-relief displays perfectly preserved geometric earthwork obscured beneath dense beech canopy.'
+    verificationStatus: 'unverified',
+    citationVerified: false,
+    locationRestricted: true,
   },
   {
     id: 'target-governors-trace',
@@ -142,14 +111,8 @@ export const INITIAL_HISTORICAL_TARGETS: TerrainTarget[] = [
     goodspeedPage: 255,
     pioneerFamily: 'Teverbaugh / Harrison / Tecumseh',
     chronicleSummary: 'Ancient buffalo and Native American trail from Vincennes to the Falls of Ohio. Renamed Governor’s Trace after Gen. William Henry Harrison traversed it. Mail was carried weekly on foot by George Teverbaugh.',
-    anomalyDescription: 'Continuous linear depression worn 2 to 4 feet below adjacent forest ground level, tracing old ridges to avoid bottomland swamps.',
-    lidarFeatures: [
-      'Dual parallel wheel/pack-train ruts in sandstone sub-stratum',
-      'Broad swale contour crossing Section 12',
-      'Cut through clay knolls toward White Oak Springs'
-    ],
-    verificationStatus: 'confirmed',
-    fieldNotes: 'Sunken roadway unmistakably visible on LiDAR hillshade slicing diagonally through woodlots.'
+    verificationStatus: 'unverified',
+    citationVerified: false,
   },
   {
     id: 'target-posey-shaft',
@@ -165,14 +128,8 @@ export const INITIAL_HISTORICAL_TARGETS: TerrainTarget[] = [
     goodspeedPage: 269,
     pioneerFamily: 'Dr. John W. Posey',
     chronicleSummary: 'Dr. Posey, an ardent abolitionist, operated this coal adit along White River. In 1837 he secretly harbored two runaway slaves, Sam and an associate, inside the dark coal galleries before helping them escape North.',
-    anomalyDescription: 'Slumped drift mine portal notch on bluff side with crescent-shaped spoil heap and overgrown tramway grade.',
-    lidarFeatures: [
-      'Concave bank cut into Coal K outcrop',
-      'Eroded spoil pile with pyritic drainage signature',
-      'Covered path climbing toward Petersburg ridge'
-    ],
     verificationStatus: 'unverified',
-    fieldNotes: 'Adit opening has collapsed into a bowl-shaped depression; iron springs seep from the Coal K sandstone roof.'
+    citationVerified: false,
   },
   {
     id: 'target-hathaway-mill',
@@ -188,14 +145,8 @@ export const INITIAL_HISTORICAL_TARGETS: TerrainTarget[] = [
     goodspeedPage: 354,
     pioneerFamily: 'Hathaway (John & William W.)',
     chronicleSummary: 'Founder of Winslow. Built water mill below bridge site. In 1835 Capt. J. W. Cockrum loaded the first flatboat of pork here to float down Patoka and Wabash to New Orleans.',
-    anomalyDescription: 'Semicircular diversion channel on north bank of Patoka River with timber cribbing foundation depression.',
-    lidarFeatures: [
-      'Remnant abutment notch on Patoka north bank',
-      'Silicified timber crib depression in mud bank',
-      'Old mill pond silt flat above rock shoals'
-    ],
     verificationStatus: 'unverified',
-    fieldNotes: 'Riverbank erosion has cut close to old mill race; timber beam ends visible at low autumn water.'
+    citationVerified: false,
   },
   {
     id: 'target-snake-knob',
@@ -211,14 +162,8 @@ export const INITIAL_HISTORICAL_TARGETS: TerrainTarget[] = [
     goodspeedPage: 262,
     pioneerFamily: 'LeMasters Family (Conrad & Simeon)',
     chronicleSummary: 'First settlement south of the Patoka (1815-1817). LeMasters, John Ferguson, and Park Bethell cleared an infamous rattlesnake den on the 290-ft high Snake Knob, killing 300 rattlesnakes in one autumn day.',
-    anomalyDescription: 'Prominent circular sandstone hill with summit bedrock fissure and a square hand-dug pioneer cabin cellar pit on the sheltered southeast bench.',
-    lidarFeatures: [
-      'Steep isolated conical elevation peak (+290 ft relief)',
-      'Sub-surface square cellar depression with fieldstone walls',
-      'Pioneer hand-dug well pit (10 ft diameter ring)'
-    ],
     verificationStatus: 'unverified',
-    fieldNotes: 'Distinct square depression on high terrace. Thick briar patches make ground reconnaissance arduous.'
+    citationVerified: false,
   },
   {
     id: 'target-hosea-smith',
@@ -234,14 +179,8 @@ export const INITIAL_HISTORICAL_TARGETS: TerrainTarget[] = [
     goodspeedPage: 251,
     pioneerFamily: 'Smith Family (Hosea, Henry, Onias)',
     chronicleSummary: 'North Carolina pioneer who surveyed Petersburg, Portersville, and Jasper. First postmaster of the territory; kept mail inside his beaver-skin hat and delivered it when crossing neighbors on horseback.',
-    anomalyDescription: 'Square cellar hole and adjacent circular stone well lining, situated at intersection of old farm trace and county surveyor meridian line.',
-    lidarFeatures: [
-      'Square excavated cellar profile (0.9m depth)',
-      'Circular stone-lined well anomaly with protective rim',
-      'Survey benchmark stone mound'
-    ],
-    verificationStatus: 'confirmed',
-    fieldNotes: 'Confirmed stone well ring with dry-laid sandstone masonry intact to 8 ft depth. Historic oak tree nearby.'
+    verificationStatus: 'unverified',
+    citationVerified: false,
   },
   {
     id: 'target-highbanks-bluff',
@@ -257,14 +196,8 @@ export const INITIAL_HISTORICAL_TARGETS: TerrainTarget[] = [
     goodspeedPage: 253,
     pioneerFamily: 'Hammond / McCain / Hargrave',
     chronicleSummary: 'Founded by Pride and McCains in 1813. In 1819 Judge Hammond arrived from Massachusetts with wagons of glass windows from Pittsburgh; crowds of pioneers flocked from across the county to gaze at real glass sash.',
-    anomalyDescription: 'Large estate foundation terraces overlooking White River with cut-stone piers and carriage turn loop.',
-    lidarFeatures: [
-      'Terraced foundation platforms above river bluffs',
-      'Outbuilding clusters and root cellar vault',
-      'Sunken road trace down to ancient ferry landing'
-    ],
     verificationStatus: 'unverified',
-    fieldNotes: 'Stands on steep high bank. Faint rectangular soil depressions match 1837 platted lots.'
+    citationVerified: false,
   },
   {
     id: 'target-ayrshire-coal',
@@ -280,14 +213,8 @@ export const INITIAL_HISTORICAL_TARGETS: TerrainTarget[] = [
     goodspeedPage: 427,
     pioneerFamily: 'Lauder / Ingle / Cockrum',
     chronicleSummary: 'Superintendent Robert Lauder tested Pike County Coal K block coal and proved its superior quality for iron smelting. Constructed eight primitive brick beehive coke furnaces in the ravine.',
-    anomalyDescription: 'Eight circular kiln mounds arranged in linear bench along hillside, cut by old narrow gauge tramway grade.',
-    lidarFeatures: [
-      'Linear battery of eight circular mound rims',
-      'Deep adit cutting into hillside slope',
-      'Extensive cinder and slag embankment'
-    ],
     verificationStatus: 'unverified',
-    fieldNotes: 'Heavy blackberry brambles completely conceal the kiln rims from satellite view; clearly visible on LiDAR.'
+    citationVerified: false,
   }
 ];
 
