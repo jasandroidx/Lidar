@@ -87,3 +87,25 @@ export interface FootstepBreadcrumb {
   lng: number;
   timestamp: number;
 }
+
+export type GridStatus = 'scanned' | 'scanning' | 'queued' | 'unscanned';
+
+export interface ScanGridTile {
+  id: string;
+  code: string; // e.g. "GRID-P-04"
+  bounds: {
+    north: number;
+    south: number;
+    east: number;
+    west: number;
+  };
+  center: {
+    lat: number;
+    lng: number;
+  };
+  status: GridStatus;
+  anomaliesFoundCount: number;
+  lastScannedTime?: string;
+  nextScheduledScanTime?: string;
+  scanProgressPercent?: number;
+}

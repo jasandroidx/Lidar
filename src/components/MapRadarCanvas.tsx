@@ -1,26 +1,28 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import L from 'leaflet';
 import {
-  Compass,
-  Layers,
-  ZoomIn,
-  ZoomOut,
-  Maximize2,
   Navigation,
-  Eye,
-  Sliders,
+  Crosshair,
   Play,
   Pause,
-  RotateCcw,
-  Sparkles,
+  ZoomIn,
+  ZoomOut,
+  Layers,
   TreePine,
   Mountain,
-  Crosshair
+  Grid,
+  Sparkles,
+  Info,
+  CheckCircle2,
+  Clock,
+  AlertCircle
 } from 'lucide-react';
 import {
   TerrainTarget,
   LiDARShaderMode,
   GPSCoordinate,
-  FootstepBreadcrumb
+  FootstepBreadcrumb,
+  ScanGridTile
 } from '../types';
 import { PIKE_CENTER_COORDS } from '../data/historicalData';
 import { playAudioFeedback, triggerHaptic } from '../utils/hapticsAndAudio';
@@ -40,7 +42,11 @@ interface MapRadarCanvasProps {
   onAddBreadcrumb: (point: FootstepBreadcrumb) => void;
   isSimulatingWalk: boolean;
   onToggleSimulateWalk: () => void;
+  gridTiles: ScanGridTile[];
+  onQueueGridTile: (tileId: string) => void;
 }
+
+type BaseMapType = 'esri_satellite' | 'osm_street' | 'usgs_topo';
 
 export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
   targets,
@@ -56,347 +62,357 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
   breadcrumbs,
   onAddBreadcrumb,
   isSimulatingWalk,
-  onToggleSimulateWalk
+  onToggleSimulateWalk,
+  gridTiles,
+  onQueueGridTile
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  const tileLayersRef = useRef<{
+    satellite?: L.TileLayer;
+    street?: L.TileLayer;
+    topo?: L.TileLayer;
+    lidar?: L.TileLayer;
+  }>({});
+
+  const markersGroupRef = useRef<L.LayerGroup | null>(null);
+  const gridGroupRef = useRef<L.LayerGroup | null>(null);
+  const gpsMarkerRef = useRef<L.Marker | null>(null);
+  const breadcrumbsPolylineRef = useRef<L.Polyline | null>(null);
+  const targetLineRef = useRef<L.Polyline | null>(null);
+
+  const [baseMapType, setBaseMapType] = useState<BaseMapType>('esri_satellite');
+  const [showGridOverlay, setShowGridOverlay] = useState(true);
+  const [hoveredTarget, setHoveredTarget] = useState<TerrainTarget | null>(null);
+  const [hoveredGridTile, setHoveredGridTile] = useState<ScanGridTile | null>(null);
+  const [isDraggingSlider, setIsDraggingSlider] = useState(false);
   const sliderBarRef = useRef<HTMLDivElement>(null);
 
-  // Map viewport state: center in lat/lng, zoom scale
-  const [viewport, setViewport] = useState({
-    centerLat: PIKE_CENTER_COORDS.latitude,
-    centerLng: PIKE_CENTER_COORDS.longitude,
-    zoom: 1.1, // 1.0 = base scale
-    panX: 0,
-    panY: 0
-  });
-
-  const [isDraggingMap, setIsDraggingMap] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [isDraggingSlider, setIsDraggingSlider] = useState(false);
-  const [showContours, setShowContours] = useState(true);
-  const [showRadarSweep, setShowRadarSweep] = useState(true);
-  const [radarAngle, setRadarAngle] = useState(0);
-
-  // Radar sweep animation
+  // Initialize Leaflet Map
   useEffect(() => {
-    if (!showRadarSweep) return;
-    const interval = setInterval(() => {
-      setRadarAngle((prev) => (prev + 1.5) % 360);
-    }, 30);
-    return () => clearInterval(interval);
-  }, [showRadarSweep]);
+    if (!mapContainerRef.current || mapInstanceRef.current) return;
 
-  // Coordinate conversion helpers:
-  // Lat: ~38.30 to ~38.53 (approx 25 km north-south)
-  // Lng: -87.35 to -87.16 (approx 18 km east-west)
-  const getCanvasXY = useCallback(
-    (lat: number, lng: number, width: number, height: number) => {
-      const minLat = 38.30;
-      const maxLat = 38.53;
-      const minLng = -87.35;
-      const maxLng = -87.16;
-
-      const normX = (lng - minLng) / (maxLng - minLng);
-      const normY = 1 - (lat - minLat) / (maxLat - minLat); // inverted for screen Y
-
-      const centerX = width / 2 + viewport.panX;
-      const centerY = height / 2 + viewport.panY;
-
-      const worldW = width * 1.5 * viewport.zoom;
-      const worldH = height * 1.5 * viewport.zoom;
-
-      const x = centerX + (normX - 0.5) * worldW;
-      const y = centerY + (normY - 0.5) * worldH;
-
-      return { x, y };
-    },
-    [viewport]
-  );
-
-  // Render procedure on canvas:
-  // Renders the underlying base LiDAR layer, then clips and renders the Satellite Forest Canopy layer based on peelPercent!
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const width = canvas.width;
-    const height = canvas.height;
-    const peelX = (width * peelPercent) / 100;
-
-    ctx.clearRect(0, 0, width, height);
-
-    // 1. DRAW BARE-EARTH LiDAR RELIEF (Right side, revealed underneath)
-    drawLidarRelief(ctx, width, height, lidarShader, showContours, viewport);
-
-    // 2. DRAW SATELLITE FOREST CANOPY LAYER (Left side, up to peelX)
-    if (peelX > 0) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(0, 0, peelX, height);
-      ctx.clip();
-      drawSatelliteCanopy(ctx, width, height, viewport);
-      ctx.restore();
-    }
-
-    // 3. DRAW HISTORICAL GROUND TRACES & NATURAL CREEKS (White River & Patoka River)
-    drawHistoricRiversAndTraces(ctx, width, height, getCanvasXY);
-
-    // 4. DRAW BREADCRUMB FOOTSTEPS
-    if (breadcrumbs.length > 0) {
-      ctx.save();
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 2.5;
-      ctx.setLineDash([4, 4]);
-      ctx.beginPath();
-      breadcrumbs.forEach((pt, i) => {
-        const { x, y } = getCanvasXY(pt.lat, pt.lng, width, height);
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      });
-      ctx.stroke();
-
-      // Individual footstep dots
-      breadcrumbs.forEach((pt, i) => {
-        const { x, y } = getCanvasXY(pt.lat, pt.lng, width, height);
-        ctx.fillStyle = i === breadcrumbs.length - 1 ? '#38bdf8' : 'rgba(56, 189, 248, 0.4)';
-        ctx.beginPath();
-        ctx.arc(x, y, 3, 0, Math.PI * 2);
-        ctx.fill();
-      });
-      ctx.restore();
-    }
-
-    // 5. DRAW LINE TO ACTIVE LOCKED TARGET
-    if (userGps && selectedTarget) {
-      const userPt = getCanvasXY(userGps.latitude, userGps.longitude, width, height);
-      const targetPt = getCanvasXY(selectedTarget.latitude, selectedTarget.longitude, width, height);
-
-      ctx.save();
-      ctx.strokeStyle = '#06b6d4';
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([6, 6]);
-      ctx.beginPath();
-      ctx.moveTo(userPt.x, userPt.y);
-      ctx.lineTo(targetPt.x, targetPt.y);
-      ctx.stroke();
-
-      // Bearing text along line
-      const midX = (userPt.x + targetPt.x) / 2;
-      const midY = (userPt.y + targetPt.y) / 2;
-      ctx.fillStyle = '#06b6d4';
-      ctx.font = '10px "JetBrains Mono", monospace';
-      ctx.fillText(
-        `${selectedTarget.distanceMeters ? Math.round(selectedTarget.distanceMeters) + 'm' : ''}`,
-        midX + 6,
-        midY - 4
-      );
-      ctx.restore();
-    }
-
-    // 6. DRAW RADAR SWEEP LINE
-    if (showRadarSweep && userGps) {
-      const userPt = getCanvasXY(userGps.latitude, userGps.longitude, width, height);
-      const rad = 240;
-      const angleRad = (radarAngle * Math.PI) / 180;
-
-      ctx.save();
-      const grad = ctx.createRadialGradient(userPt.x, userPt.y, 10, userPt.x, userPt.y, rad);
-      grad.addColorStop(0, 'rgba(16, 185, 129, 0.15)');
-      grad.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
-
-      ctx.beginPath();
-      ctx.moveTo(userPt.x, userPt.y);
-      ctx.arc(userPt.x, userPt.y, rad, angleRad - 0.4, angleRad);
-      ctx.closePath();
-      ctx.fillStyle = grad;
-      ctx.fill();
-
-      // Main sweep ray
-      ctx.beginPath();
-      ctx.moveTo(userPt.x, userPt.y);
-      ctx.lineTo(userPt.x + Math.cos(angleRad) * rad, userPt.y + Math.sin(angleRad) * rad);
-      ctx.strokeStyle = 'rgba(52, 211, 153, 0.6)';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    // 7. DRAW HISTORICAL TARGET MARKERS
-    targets.forEach((target) => {
-      const pt = getCanvasXY(target.latitude, target.longitude, width, height);
-      const isSelected = selectedTarget?.id === target.id;
-      drawTargetMarker(ctx, pt.x, pt.y, target, isSelected, pt.x < peelX);
+    const map = L.map(mapContainerRef.current, {
+      center: [PIKE_CENTER_COORDS.latitude, PIKE_CENTER_COORDS.longitude],
+      zoom: 13,
+      zoomControl: false,
+      attributionControl: false
     });
 
-    // 8. DRAW LIVE BLUE GPS BEACON
-    if (userGps) {
-      const userPt = getCanvasXY(userGps.latitude, userGps.longitude, width, height);
-      drawGpsBeacon(ctx, userPt.x, userPt.y, userGps.headingDeg || 45);
-    }
-  }, [
-    viewport,
-    peelPercent,
-    lidarShader,
-    showContours,
-    showRadarSweep,
-    radarAngle,
-    targets,
-    selectedTarget,
-    userGps,
-    breadcrumbs,
-    getCanvasXY
-  ]);
+    // Tile Layers Setup
+    // 1. Esri World Imagery (Satellite)
+    const satelliteLayer = L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      { maxZoom: 19, attribution: 'Esri World Imagery' }
+    );
 
-  // Resize canvas smoothly on container size
-  useEffect(() => {
-    const handleResize = () => {
-      if (!containerRef.current || !canvasRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
-      canvasRef.current.width = rect.width;
-      canvasRef.current.height = rect.height;
+    // 2. OpenStreetMap (Street Map)
+    const streetLayer = L.tileLayer(
+      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      { maxZoom: 19, attribution: 'OpenStreetMap' }
+    );
+
+    // 3. USGS Topo Base
+    const topoLayer = L.tileLayer(
+      'https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryTopo/MapServer/tile/{z}/{y}/{x}',
+      { maxZoom: 16, attribution: 'USGS National Map' }
+    );
+
+    // 4. LiDAR Bare-Earth Hillshade (Esri Elevation / USGS 3DEP Hillshade)
+    const lidarLayer = L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}',
+      { maxZoom: 19, opacity: 1 - peelPercent / 100 }
+    );
+
+    // Default base layer
+    satelliteLayer.addTo(map);
+    lidarLayer.addTo(map);
+
+    tileLayersRef.current = {
+      satellite: satelliteLayer,
+      street: streetLayer,
+      topo: topoLayer,
+      lidar: lidarLayer
     };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+
+    // Layer Groups
+    const markersGroup = L.layerGroup().addTo(map);
+    const gridGroup = L.layerGroup().addTo(map);
+    markersGroupRef.current = markersGroup;
+    gridGroupRef.current = gridGroup;
+
+    mapInstanceRef.current = map;
+
+    return () => {
+      map.remove();
+      mapInstanceRef.current = null;
+    };
   }, []);
 
-  // Map drag and panning handlers
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (isDraggingSlider) return;
-    setIsDraggingMap(true);
-    setDragStart({ x: e.clientX - viewport.panX, y: e.clientY - viewport.panY });
-  };
+  // Handle Base Map Switching
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || !tileLayersRef.current.satellite) return;
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDraggingSlider && containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const clientX = e.clientX;
-      const newPercent = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
-      onPeelChange(Math.round(newPercent));
-      return;
+    const { satellite, street, topo } = tileLayersRef.current;
+    if (satellite && map.hasLayer(satellite)) map.removeLayer(satellite);
+    if (street && map.hasLayer(street)) map.removeLayer(street);
+    if (topo && map.hasLayer(topo)) map.removeLayer(topo);
+
+    if (baseMapType === 'esri_satellite' && satellite) map.addLayer(satellite);
+    if (baseMapType === 'osm_street' && street) map.addLayer(street);
+    if (baseMapType === 'usgs_topo' && topo) map.addLayer(topo);
+
+    // Ensure LiDAR layer remains on top
+    if (tileLayersRef.current.lidar) {
+      tileLayersRef.current.lidar.bringToFront();
     }
+  }, [baseMapType]);
 
-    if (!isDraggingMap) return;
-    setViewport((prev) => ({
-      ...prev,
-      panX: e.clientX - dragStart.x,
-      panY: e.clientY - dragStart.y
-    }));
-  };
+  // Handle Canopy Peel Opacity Slider
+  useEffect(() => {
+    if (tileLayersRef.current.lidar) {
+      // 0% peel = 1.0 LiDAR opacity (pure LiDAR)
+      // 100% peel = 0.0 LiDAR opacity (pure Satellite canopy)
+      const opacity = 1 - peelPercent / 100;
+      tileLayersRef.current.lidar.setOpacity(opacity);
+    }
+  }, [peelPercent]);
 
-  const handleMouseUp = () => {
-    setIsDraggingMap(false);
-    setIsDraggingSlider(false);
-  };
+  // Render Grokbot Scan Grid Blocks Overlay
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const gridGroup = gridGroupRef.current;
+    if (!map || !gridGroup) return;
 
-  // Touch handlers for mobile
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (isDraggingSlider) return;
-    if (e.touches.length === 1) {
-      setIsDraggingMap(true);
-      setDragStart({
-        x: e.touches[0].clientX - viewport.panX,
-        y: e.touches[0].clientY - viewport.panY
+    gridGroup.clearLayers();
+    if (!showGridOverlay) return;
+
+    gridTiles.forEach((tile) => {
+      const { north, south, east, west } = tile.bounds;
+      const bounds: L.LatLngBoundsExpression = [
+        [south, west],
+        [north, east]
+      ];
+
+      let color = '#38bdf8'; // cyan for queued/default
+      let fillColor = 'rgba(56, 189, 248, 0.08)';
+      let dashArray = undefined;
+
+      if (tile.status === 'scanned') {
+        color = '#10b981'; // emerald
+        fillColor = 'rgba(16, 185, 129, 0.12)';
+      } else if (tile.status === 'scanning') {
+        color = '#f59e0b'; // amber
+        fillColor = 'rgba(245, 158, 11, 0.2)';
+        dashArray = '6, 6';
+      } else if (tile.status === 'queued') {
+        color = '#06b6d4'; // cyan
+        fillColor = 'rgba(6, 182, 212, 0.1)';
+        dashArray = '4, 4';
+      } else if (tile.status === 'unscanned') {
+        color = '#64748b'; // slate
+        fillColor = 'rgba(100, 116, 139, 0.05)';
+        dashArray = '2, 4';
+      }
+
+      const rect = L.rectangle(bounds, {
+        color,
+        weight: tile.status === 'scanning' ? 2.5 : 1.5,
+        fillColor,
+        fillOpacity: 0.15,
+        dashArray
       });
-    }
-  };
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (isDraggingSlider && containerRef.current && e.touches.length > 0) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const clientX = e.touches[0].clientX;
-      const newPercent = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
-      onPeelChange(Math.round(newPercent));
-      return;
-    }
+      // Interactive hover & click on grid block
+      rect.on('mouseover', () => setHoveredGridTile(tile));
+      rect.on('mouseout', () => setHoveredGridTile(null));
+      rect.on('click', () => {
+        playAudioFeedback('lock');
+        triggerHaptic(20);
+        if (tile.status === 'unscanned' || tile.status === 'queued') {
+          onQueueGridTile(tile.id);
+        }
+      });
 
-    if (!isDraggingMap || e.touches.length !== 1) return;
-    setViewport((prev) => ({
-      ...prev,
-      panX: e.touches[0].clientX - dragStart.x,
-      panY: e.touches[0].clientY - dragStart.y
-    }));
-  };
+      gridGroup.addLayer(rect);
+    });
+  }, [gridTiles, showGridOverlay, onQueueGridTile]);
 
-  const handleTouchEnd = () => {
-    setIsDraggingMap(false);
-    setIsDraggingSlider(false);
-  };
+  // Render Anomaly Markers
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const markersGroup = markersGroupRef.current;
+    if (!map || !markersGroup) return;
 
-  // Zoom controls
-  const handleZoom = (delta: number) => {
-    playAudioFeedback('lock');
-    setViewport((prev) => ({
-      ...prev,
-      zoom: Math.max(0.6, Math.min(3.5, prev.zoom + delta))
-    }));
-  };
+    markersGroup.clearLayers();
 
-  // Center on GPS
-  const handleCenterGps = () => {
-    playAudioFeedback('ping');
-    triggerHaptic([20, 20]);
-    if (userGps && canvasRef.current) {
-      const width = canvasRef.current.width;
-      const height = canvasRef.current.height;
-      // Reset pan so GPS point is centered
-      setViewport((prev) => ({
-        ...prev,
-        panX: 0,
-        panY: 0
-      }));
-    }
-  };
+    targets.forEach((target) => {
+      const isSelected = selectedTarget?.id === target.id;
+      let statusColor = '#38bdf8'; // cyan unverified
+      if (target.verificationStatus === 'confirmed') statusColor = '#10b981';
+      else if (target.verificationStatus === 'walkover') statusColor = '#f59e0b';
+      else if (target.verificationStatus === 'rejected') statusColor = '#f43f5e';
 
-  // Canvas click to select marker
-  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (isDraggingMap || isDraggingSlider) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
+      const iconHtml = `
+        <div class="relative group cursor-pointer flex items-center justify-center transition-transform ${
+          isSelected ? 'scale-125 z-50' : 'hover:scale-115'
+        }">
+          ${
+            isSelected
+              ? `<div class="absolute -inset-2 rounded-full bg-white/20 animate-ping"></div>`
+              : ''
+          }
+          <div class="w-8 h-8 rounded-full bg-stone-900/90 border-2 flex items-center justify-center shadow-xl backdrop-blur-md" style="border-color: ${statusColor}; color: ${statusColor};">
+            <span class="text-xs font-mono-tech font-bold">${
+              target.category === 'cellar_hole'
+                ? '⌂'
+                : target.category === 'pioneer_well'
+                ? '○'
+                : target.category === 'blockhouse_fort'
+                ? '⛨'
+                : target.category === 'prehistoric_mound'
+                ? '▲'
+                : target.category === 'mill_race'
+                ? '⚙'
+                : target.category === 'coal_drift'
+                ? '⛏'
+                : '≡'
+            }</span>
+          </div>
+          <div class="absolute top-9 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded bg-black/80 text-[10px] font-mono-tech text-stone-200 whitespace-nowrap shadow border border-stone-800 pointer-events-none">
+            ${target.name.length > 20 ? target.name.slice(0, 18) + '…' : target.name}
+          </div>
+        </div>
+      `;
 
-    // Check hit test for each target marker (hit radius 24px)
-    let hitTarget: TerrainTarget | null = null;
-    for (const t of targets) {
-      const pt = getCanvasXY(t.latitude, t.longitude, canvas.width, canvas.height);
-      const dist = Math.hypot(clickX - pt.x, clickY - pt.y);
-      if (dist < 26) {
-        hitTarget = t;
-        break;
+      const customIcon = L.divIcon({
+        html: iconHtml,
+        className: 'custom-anomaly-marker',
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+      });
+
+      const marker = L.marker([target.latitude, target.longitude], {
+        icon: customIcon
+      });
+
+      marker.on('mouseover', () => setHoveredTarget(target));
+      marker.on('mouseout', () => setHoveredTarget(null));
+      marker.on('click', () => {
+        playAudioFeedback('lock');
+        triggerHaptic(30);
+        onSelectTarget(target);
+      });
+
+      markersGroup.addLayer(marker);
+    });
+  }, [targets, selectedTarget, onSelectTarget]);
+
+  // Render User GPS Beacon & Breadcrumbs
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    if (userGps) {
+      const gpsLatLng: [number, number] = [userGps.latitude, userGps.longitude];
+
+      const gpsIconHtml = `
+        <div class="relative flex items-center justify-center">
+          <div class="absolute w-10 h-10 rounded-full bg-cyan-500/30 animate-ping"></div>
+          <div class="w-6 h-6 rounded-full bg-cyan-500 border-2 border-white shadow-2xl flex items-center justify-center">
+            <div class="w-2 h-2 rounded-full bg-white"></div>
+          </div>
+        </div>
+      `;
+
+      const gpsIcon = L.divIcon({
+        html: gpsIconHtml,
+        className: 'custom-gps-beacon',
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+      });
+
+      if (!gpsMarkerRef.current) {
+        gpsMarkerRef.current = L.marker(gpsLatLng, { icon: gpsIcon }).addTo(map);
+      } else {
+        gpsMarkerRef.current.setLatLng(gpsLatLng);
+      }
+
+      // Target lock polyline
+      if (selectedTarget) {
+        const targetLatLng: [number, number] = [selectedTarget.latitude, selectedTarget.longitude];
+        if (targetLineRef.current) {
+          targetLineRef.current.setLatLngs([gpsLatLng, targetLatLng]);
+        } else {
+          targetLineRef.current = L.polyline([gpsLatLng, targetLatLng], {
+            color: '#06b6d4',
+            weight: 2,
+            dashArray: '6, 6',
+            opacity: 0.8
+          }).addTo(map);
+        }
+      } else if (targetLineRef.current) {
+        map.removeLayer(targetLineRef.current);
+        targetLineRef.current = null;
+      }
+    } else {
+      if (gpsMarkerRef.current) {
+        map.removeLayer(gpsMarkerRef.current);
+        gpsMarkerRef.current = null;
+      }
+      if (targetLineRef.current) {
+        map.removeLayer(targetLineRef.current);
+        targetLineRef.current = null;
       }
     }
 
-    if (hitTarget) {
-      playAudioFeedback('lock');
-      triggerHaptic(30);
-      onSelectTarget(hitTarget);
+    // Breadcrumbs path
+    if (breadcrumbs.length > 0) {
+      const latLngs: [number, number][] = breadcrumbs.map((b) => [b.lat, b.lng]);
+      if (breadcrumbsPolylineRef.current) {
+        breadcrumbsPolylineRef.current.setLatLngs(latLngs);
+      } else {
+        breadcrumbsPolylineRef.current = L.polyline(latLngs, {
+          color: '#38bdf8',
+          weight: 3,
+          opacity: 0.7,
+          dashArray: '4, 4'
+        }).addTo(map);
+      }
+    }
+  }, [userGps, selectedTarget, breadcrumbs]);
+
+  // Zoom handlers
+  const handleZoom = (delta: number) => {
+    playAudioFeedback('lock');
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.setZoom(mapInstanceRef.current.getZoom() + delta);
     }
   };
 
+  const handleCenterGps = () => {
+    playAudioFeedback('ping');
+    triggerHaptic([20, 20]);
+    if (userGps && mapInstanceRef.current) {
+      mapInstanceRef.current.flyTo([userGps.latitude, userGps.longitude], 16, { animate: true });
+    }
+  };
+
+  // Slider Dragging Event Handling
+  const handleSliderMove = (clientX: number) => {
+    if (!sliderBarRef.current) return;
+    const mapRect = mapContainerRef.current?.getBoundingClientRect();
+    if (!mapRect) return;
+
+    const percent = Math.max(0, Math.min(100, ((clientX - mapRect.left) / mapRect.width) * 100));
+    onPeelChange(Math.round(percent));
+  };
+
   return (
-    <div
-      ref={containerRef}
-      id="map-radar-viewport"
-      className="relative w-full h-full bg-[#030907] overflow-hidden select-none touch-none cursor-grab active:cursor-grabbing"
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
-      {/* Background Interactive Canvas */}
-      <canvas
-        ref={canvasRef}
-        id="canvas-radar-display"
-        onClick={handleCanvasClick}
-        className="absolute inset-0 w-full h-full block"
-      />
+    <div className="relative w-full h-full bg-stone-950 overflow-hidden select-none touch-none">
+      {/* Real Leaflet Tile Map Container */}
+      <div ref={mapContainerRef} className="absolute inset-0 w-full h-full z-0" />
 
       {/* Touch-Draggable Canopy Peel Wipe Slider Line */}
       <div
@@ -416,7 +432,7 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
         }}
       >
         {/* Thumb grabber knob */}
-        <div className="absolute top-1/2 -translate-y-1/2 -left-4 w-9 h-11 bg-stone-900/90 border-2 border-cyan-400 rounded-lg shadow-2xl flex flex-col items-center justify-center gap-1 backdrop-blur-md transition-transform group-hover:scale-110 active:scale-95 text-cyan-300">
+        <div className="absolute top-1/2 -translate-y-1/2 -left-4 w-9 h-11 bg-stone-900/95 border-2 border-cyan-400 rounded-lg shadow-2xl flex flex-col items-center justify-center gap-1 backdrop-blur-md transition-transform group-hover:scale-110 active:scale-95 text-cyan-300">
           <div className="flex items-center gap-0.5">
             <span className="w-0.5 h-4 bg-cyan-400 rounded-full" />
             <span className="w-0.5 h-4 bg-emerald-400 rounded-full" />
@@ -437,94 +453,103 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
         </div>
       </div>
 
-      {/* Top Map HUD: Preset Toggles & Compass */}
-      <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none z-20">
-        {/* Preset Wipe Buttons */}
-        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-black/60 border border-emerald-900/60 backdrop-blur-md pointer-events-auto">
+      {/* Top Map HUD: Base Map Selector, Preset Wipes, Grid Toggle */}
+      <div className="absolute top-3 left-3 right-3 flex flex-wrap items-center justify-between gap-2 pointer-events-none z-20">
+        {/* Base Map Tile Selector */}
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-black/80 border border-emerald-900/60 backdrop-blur-md pointer-events-auto shadow-xl">
+          <span className="text-[10px] font-mono-tech text-stone-400 px-2 flex items-center gap-1">
+            <Layers className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="hidden sm:inline">MAP:</span>
+          </span>
           <button
-            id="btn-wipe-0"
+            onClick={() => setBaseMapType('esri_satellite')}
+            className={`px-2.5 py-1 rounded-lg text-[10px] font-mono-tech transition ${
+              baseMapType === 'esri_satellite'
+                ? 'bg-emerald-600 text-white font-bold'
+                : 'text-stone-300 hover:bg-white/10'
+            }`}
+          >
+            SATELLITE
+          </button>
+          <button
+            onClick={() => setBaseMapType('osm_street')}
+            className={`px-2.5 py-1 rounded-lg text-[10px] font-mono-tech transition ${
+              baseMapType === 'osm_street'
+                ? 'bg-cyan-600 text-white font-bold'
+                : 'text-stone-300 hover:bg-white/10'
+            }`}
+          >
+            STREET
+          </button>
+          <button
+            onClick={() => setBaseMapType('usgs_topo')}
+            className={`px-2.5 py-1 rounded-lg text-[10px] font-mono-tech transition ${
+              baseMapType === 'usgs_topo'
+                ? 'bg-amber-600 text-white font-bold'
+                : 'text-stone-300 hover:bg-white/10'
+            }`}
+          >
+            USGS TOPO
+          </button>
+        </div>
+
+        {/* Preset Wipe Buttons & Grid Toggle */}
+        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-black/80 border border-cyan-900/60 backdrop-blur-md pointer-events-auto shadow-xl">
+          <button
             onClick={() => {
               playAudioFeedback('peel');
               onPeelChange(0);
             }}
-            className={`px-2.5 py-1 rounded-lg text-[10px] font-mono-tech transition ${
-              peelPercent === 0
-                ? 'bg-cyan-600 text-white font-bold'
-                : 'text-stone-300 hover:bg-white/10'
+            className={`px-2 py-1 rounded-lg text-[10px] font-mono-tech transition ${
+              peelPercent === 0 ? 'bg-cyan-600 text-white font-bold' : 'text-stone-300 hover:bg-white/10'
             }`}
-            title="Peel 100% back to Bare-Earth LiDAR"
           >
             PURE LiDAR
           </button>
           <button
-            id="btn-wipe-50"
             onClick={() => {
               playAudioFeedback('peel');
               onPeelChange(50);
             }}
-            className={`px-2.5 py-1 rounded-lg text-[10px] font-mono-tech transition ${
-              peelPercent === 50
-                ? 'bg-emerald-600 text-white font-bold'
-                : 'text-stone-300 hover:bg-white/10'
+            className={`px-2 py-1 rounded-lg text-[10px] font-mono-tech transition ${
+              peelPercent === 50 ? 'bg-emerald-600 text-white font-bold' : 'text-stone-300 hover:bg-white/10'
             }`}
-            title="50/50 Split View"
           >
-            50/50 WIPE
+            50/50
           </button>
           <button
-            id="btn-wipe-100"
             onClick={() => {
               playAudioFeedback('peel');
               onPeelChange(100);
             }}
-            className={`px-2.5 py-1 rounded-lg text-[10px] font-mono-tech transition ${
-              peelPercent === 100
-                ? 'bg-emerald-800 text-white font-bold'
-                : 'text-stone-300 hover:bg-white/10'
+            className={`px-2 py-1 rounded-lg text-[10px] font-mono-tech transition ${
+              peelPercent === 100 ? 'bg-emerald-800 text-white font-bold' : 'text-stone-300 hover:bg-white/10'
             }`}
-            title="Modern Satellite Forest Canopy"
           >
             CANOPY
           </button>
-        </div>
 
-        {/* Shader Mode Selector */}
-        <div className="hidden sm:flex items-center gap-1 p-1 rounded-xl bg-black/60 border border-cyan-900/60 backdrop-blur-md pointer-events-auto">
-          <span className="text-[10px] font-mono-tech text-stone-400 px-2 flex items-center gap-1">
-            <Layers className="w-3 h-3 text-cyan-400" />
-            <span>SHADER:</span>
-          </span>
-          {(
-            [
-              ['analytical_hillshade', 'Relief'],
-              ['multidirectional', 'Multi-Dir'],
-              ['slope_angle', 'Slope/Walls'],
-              ['hypsometric', 'Elevation']
-            ] as const
-          ).map(([mode, label]) => (
-            <button
-              key={mode}
-              onClick={() => {
-                playAudioFeedback('lock');
-                onShaderChange(mode);
-              }}
-              className={`px-2 py-0.5 rounded-md text-[10px] font-mono-tech transition ${
-                lidarShader === mode
-                  ? 'bg-cyan-600 text-white font-bold shadow'
-                  : 'text-stone-400 hover:text-white'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+          <button
+            onClick={() => {
+              playAudioFeedback('lock');
+              setShowGridOverlay(!showGridOverlay);
+            }}
+            className={`ml-1 px-2.5 py-1 rounded-lg text-[10px] font-mono-tech flex items-center gap-1 transition ${
+              showGridOverlay
+                ? 'bg-amber-600 text-white font-bold'
+                : 'bg-stone-800 text-stone-400 hover:text-white'
+            }`}
+            title="Toggle Grokbot Scan Grid Overlay"
+          >
+            <Grid className="w-3 h-3" />
+            <span>GRID</span>
+          </button>
         </div>
       </div>
 
-      {/* Floating Tactical Controls: Zoom, Center GPS, Simulate Walk */}
+      {/* Floating Tactical Controls: Zoom, GPS Lock, Virtual Walk Simulator */}
       <div className="absolute right-3 bottom-24 md:bottom-6 flex flex-col gap-2 z-20 pointer-events-auto">
-        {/* Live GPS Lock / Toggle */}
         <button
-          id="btn-toggle-gps-lock"
           onClick={onToggleGps}
           className={`p-3 rounded-xl border shadow-xl backdrop-blur-md transition active:scale-95 flex items-center justify-center ${
             isGpsActive
@@ -536,9 +561,7 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
           <Navigation className={`w-5 h-5 ${isGpsActive ? 'animate-pulse text-white' : ''}`} />
         </button>
 
-        {/* Center on User GPS */}
         <button
-          id="btn-center-gps"
           onClick={handleCenterGps}
           className="p-2.5 rounded-xl bg-stone-900/80 border border-stone-700 text-stone-300 hover:text-white shadow-xl backdrop-blur-md transition active:scale-95"
           title="Center on GPS Beacon"
@@ -546,433 +569,98 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
           <Crosshair className="w-4 h-4 text-cyan-400" />
         </button>
 
-        {/* Virtual Walk Simulator (indoor testing) */}
         <button
-          id="btn-simulate-walk"
           onClick={onToggleSimulateWalk}
           className={`p-2.5 rounded-xl border shadow-xl backdrop-blur-md transition active:scale-95 ${
             isSimulatingWalk
               ? 'bg-amber-600 text-white border-amber-400 animate-pulse'
               : 'bg-stone-900/80 text-stone-300 border-stone-700 hover:text-white'
           }`}
-          title={isSimulatingWalk ? 'Pause Virtual Walk Simulation' : 'Simulate Walking Field Transect in Woods'}
+          title={isSimulatingWalk ? 'Pause Virtual Walk Simulation' : 'Simulate Field Walk'}
         >
           {isSimulatingWalk ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 text-amber-400" />}
         </button>
 
-        {/* Zoom In / Out */}
         <button
-          id="btn-zoom-in"
-          onClick={() => handleZoom(0.2)}
+          onClick={() => handleZoom(1)}
           className="p-2.5 rounded-xl bg-stone-900/80 border border-stone-700 text-stone-300 hover:text-white shadow-xl backdrop-blur-md transition active:scale-95"
-          title="Zoom In"
         >
           <ZoomIn className="w-4 h-4" />
         </button>
 
         <button
-          id="btn-zoom-out"
-          onClick={() => handleZoom(-0.2)}
+          onClick={() => handleZoom(-1)}
           className="p-2.5 rounded-xl bg-stone-900/80 border border-stone-700 text-stone-300 hover:text-white shadow-xl backdrop-blur-md transition active:scale-95"
-          title="Zoom Out"
         >
           <ZoomOut className="w-4 h-4" />
         </button>
-
-        {/* Contour lines toggle */}
-        <button
-          id="btn-toggle-contours"
-          onClick={() => {
-            playAudioFeedback('lock');
-            setShowContours(!showContours);
-          }}
-          className={`p-2.5 rounded-xl border shadow-xl backdrop-blur-md transition active:scale-95 ${
-            showContours
-              ? 'bg-emerald-950/80 border-emerald-500/50 text-emerald-300'
-              : 'bg-stone-900/80 border-stone-700 text-stone-500'
-          }`}
-          title="Toggle 5m Topographic Contours"
-        >
-          <Layers className="w-4 h-4" />
-        </button>
       </div>
 
-      {/* Bottom Coordinates & Scale Bar */}
-      <div className="absolute left-3 bottom-24 md:bottom-4 pointer-events-none z-20 flex flex-col gap-1 text-[10px] font-mono-tech text-stone-400">
-        <div className="bg-black/60 px-2 py-1 rounded-md border border-stone-800 backdrop-blur-sm inline-block">
-          <span>CENTER: {viewport.centerLat.toFixed(4)}°N, {Math.abs(viewport.centerLng).toFixed(4)}°W</span>
-          <span className="ml-2 text-emerald-400">ZOOM: {(viewport.zoom * 100).toFixed(0)}%</span>
+      {/* Hovered Target Tactical Details Tooltip */}
+      {hoveredTarget && (
+        <div className="absolute top-16 left-3 max-w-sm bg-stone-900/95 border border-cyan-500/50 p-3 rounded-xl shadow-2xl backdrop-blur-md z-30 pointer-events-none font-sans-ui text-stone-200 animate-fadeIn">
+          <div className="flex items-center gap-2 mb-1">
+            <Sparkles className="w-4 h-4 text-cyan-400" />
+            <h4 className="font-bold text-sm text-cyan-300">{hoveredTarget.name}</h4>
+          </div>
+          <p className="text-xs text-stone-300 mb-2 leading-tight">{hoveredTarget.anomalyDescription}</p>
+          <div className="text-[10px] font-mono-tech text-stone-400 border-t border-stone-800 pt-1.5 flex flex-col gap-1">
+            <span className="text-emerald-400">⚡ WHY FLAGGED BY GROKBOT:</span>
+            {hoveredTarget.lidarFeatures.slice(0, 2).map((feat, i) => (
+              <span key={i} className="flex items-center gap-1 text-stone-300">
+                <span>•</span> {feat}
+              </span>
+            ))}
+          </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-20 h-1 bg-stone-300 border-x border-stone-100" />
-          <span>250 METERS</span>
+      )}
+
+      {/* Hovered Grid Block Tooltip */}
+      {hoveredGridTile && !hoveredTarget && (
+        <div className="absolute top-16 left-3 max-w-xs bg-stone-900/95 border border-amber-500/50 p-3 rounded-xl shadow-2xl backdrop-blur-md z-30 pointer-events-none font-sans-ui text-stone-200">
+          <div className="flex items-center justify-between gap-2 mb-1">
+            <div className="flex items-center gap-1.5">
+              <Grid className="w-4 h-4 text-amber-400" />
+              <h4 className="font-mono-tech font-bold text-xs text-amber-300">{hoveredGridTile.code}</h4>
+            </div>
+            <span
+              className={`text-[9px] px-1.5 py-0.5 rounded font-mono-tech uppercase ${
+                hoveredGridTile.status === 'scanned'
+                  ? 'bg-emerald-950 text-emerald-400 border border-emerald-700'
+                  : hoveredGridTile.status === 'scanning'
+                  ? 'bg-amber-950 text-amber-400 border border-amber-700 animate-pulse'
+                  : hoveredGridTile.status === 'queued'
+                  ? 'bg-cyan-950 text-cyan-400 border border-cyan-700'
+                  : 'bg-stone-800 text-stone-400'
+              }`}
+            >
+              {hoveredGridTile.status}
+            </span>
+          </div>
+          <p className="text-[11px] text-stone-300 mb-1">
+            {hoveredGridTile.status === 'scanned'
+              ? `LiDAR scan completed. ${hoveredGridTile.anomaliesFoundCount} anomalies detected.`
+              : hoveredGridTile.status === 'scanning'
+              ? `Grokbot scan actively processing terrain tiles (${hoveredGridTile.scanProgressPercent}%)...`
+              : hoveredGridTile.status === 'queued'
+              ? `Queued for next 4-hour Grokbot LiDAR scan pass.`
+              : `Unscanned sector. Click tile to queue this grid next!`}
+          </p>
+          {(hoveredGridTile.status === 'unscanned' || hoveredGridTile.status === 'queued') && (
+            <div className="mt-2 pt-1 border-t border-stone-800 text-[10px] font-mono-tech text-amber-400 font-bold flex items-center gap-1">
+              <span>👉 CLICK TILE TO QUEUE THIS GRID NEXT</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Bottom Coordinates HUD */}
+      <div className="absolute left-3 bottom-24 md:bottom-4 pointer-events-none z-20 flex flex-col gap-1 text-[10px] font-mono-tech text-stone-400">
+        <div className="bg-black/80 px-2.5 py-1 rounded-md border border-stone-800 backdrop-blur-sm inline-block shadow-lg">
+          <span>CENTER: {PIKE_CENTER_COORDS.latitude.toFixed(4)}°N, {Math.abs(PIKE_CENTER_COORDS.longitude).toFixed(4)}°W</span>
+          <span className="ml-2 text-emerald-400">ESRI / USGS GIS READY</span>
         </div>
       </div>
     </div>
   );
 };
-
-// =========================================================================
-// CANVAS DRAWING HELPER ROUTINES
-// =========================================================================
-
-function drawLidarRelief(
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-  mode: LiDARShaderMode,
-  showContours: boolean,
-  viewport: { zoom: number; panX: number; panY: number }
-) {
-  // Base background: deep slate/charcoal terrain
-  ctx.fillStyle = '#0b1311';
-  ctx.fillRect(0, 0, width, height);
-
-  // Procedural topography ridges & valleys for Pike County:
-  // Rolling knobstone topography along Patoka & White River valleys
-  const gridStep = 24 * viewport.zoom;
-  const cols = Math.ceil(width / gridStep) + 2;
-  const rows = Math.ceil(height / gridStep) + 2;
-
-  const offsetX = (viewport.panX % gridStep);
-  const offsetY = (viewport.panY % gridStep);
-
-  for (let c = -1; c < cols; c++) {
-    for (let r = -1; r < rows; r++) {
-      const px = c * gridStep + offsetX;
-      const py = r * gridStep + offsetY;
-
-      // Mathematical hillshade simulation from NW lighting (315°)
-      const elevation = Math.sin((px + viewport.panX * 0.2) * 0.008) * Math.cos((py + viewport.panY * 0.2) * 0.008);
-      const slope = Math.cos((px + py) * 0.015);
-
-      if (mode === 'analytical_hillshade') {
-        const val = Math.floor(40 + 70 * (elevation * 0.5 + 0.5) + 30 * slope);
-        ctx.fillStyle = `rgb(${Math.round(val * 0.9)}, ${Math.round(val * 1.05)}, ${Math.round(val * 0.95)})`;
-      } else if (mode === 'multidirectional') {
-        const val1 = 50 + 60 * (elevation * 0.5 + 0.5);
-        const val2 = 30 + 40 * slope;
-        ctx.fillStyle = `rgb(${Math.round(val1 * 0.8)}, ${Math.round((val1 + val2) * 0.6)}, ${Math.round(val2 * 1.1)})`;
-      } else if (mode === 'slope_angle') {
-        // Highlights steep features (cellar hole walls, ditches) in amber/cyan
-        const steepness = Math.abs(slope);
-        if (steepness > 0.65) {
-          ctx.fillStyle = `rgba(245, 158, 11, ${0.4 + steepness * 0.5})`;
-        } else {
-          ctx.fillStyle = `rgb(20, 30, 26)`;
-        }
-      } else if (mode === 'hypsometric') {
-        // Rainbow heat elevation ramp
-        const norm = elevation * 0.5 + 0.5;
-        if (norm < 0.25) ctx.fillStyle = '#0f766e';
-        else if (norm < 0.5) ctx.fillStyle = '#15803d';
-        else if (norm < 0.75) ctx.fillStyle = '#b45309';
-        else ctx.fillStyle = '#e11d48';
-      }
-
-      ctx.fillRect(px, py, gridStep, gridStep);
-    }
-  }
-
-  // Topographic contour lines overlay
-  if (showContours) {
-    ctx.save();
-    ctx.strokeStyle = 'rgba(52, 211, 153, 0.18)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    for (let y = 0; y < height; y += 45 * viewport.zoom) {
-      ctx.moveTo(0, y + Math.sin(y * 0.02 + viewport.panX * 0.01) * 20);
-      for (let x = 0; x < width; x += 30) {
-        ctx.lineTo(x, y + Math.sin((x + viewport.panX) * 0.015) * 15 + Math.cos(y * 0.02) * 10);
-      }
-    }
-    ctx.stroke();
-    ctx.restore();
-  }
-}
-
-function drawSatelliteCanopy(
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-  viewport: { zoom: number; panX: number; panY: number }
-) {
-  // Dense forest base: rich deep green foliage
-  ctx.fillStyle = '#0f291e';
-  ctx.fillRect(0, 0, width, height);
-
-  // Modern agricultural fields & farm parcels
-  ctx.fillStyle = '#1e382b';
-  ctx.fillRect(width * 0.1, height * 0.15, width * 0.35, height * 0.3);
-  ctx.fillStyle = '#1a3326';
-  ctx.fillRect(width * 0.45, height * 0.5, width * 0.4, height * 0.35);
-
-  // Dense clumps of tree crowns (hardwood canopy texture)
-  const treeStep = 18 * viewport.zoom;
-  ctx.save();
-  for (let x = -20; x < width + 20; x += treeStep) {
-    for (let y = -20; y < height + 20; y += treeStep) {
-      // Noise jitter
-      const jitterX = Math.sin(x * 12.3 + y * 4.7) * (treeStep * 0.4);
-      const jitterY = Math.cos(x * 6.1 + y * 9.8) * (treeStep * 0.4);
-      const radius = (treeStep * 0.65) + Math.sin(x + y) * 3;
-
-      const greenTone = Math.floor(45 + Math.sin(x * 0.05) * 20);
-      ctx.fillStyle = `rgb(16, ${greenTone}, 26)`;
-      ctx.beginPath();
-      ctx.arc(x + jitterX, y + jitterY, Math.max(4, radius), 0, Math.PI * 2);
-      ctx.fill();
-
-      // Leaf highlight
-      ctx.fillStyle = `rgba(52, 211, 153, 0.15)`;
-      ctx.beginPath();
-      ctx.arc(x + jitterX - 2, y + jitterY - 2, Math.max(2, radius * 0.5), 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-
-  // Modern paved / gravel roads on satellite view
-  ctx.strokeStyle = '#475569';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  // State Road 61 / 56 representation
-  ctx.moveTo(width * 0.48, 0);
-  ctx.lineTo(width * 0.52, height);
-  ctx.moveTo(0, height * 0.42);
-  ctx.lineTo(width, height * 0.38);
-  ctx.stroke();
-
-  // Road center lines
-  ctx.strokeStyle = '#94a3b8';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  ctx.restore();
-}
-
-function drawHistoricRiversAndTraces(
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-  getCanvasXY: (lat: number, lng: number, w: number, h: number) => { x: number; y: number }
-) {
-  ctx.save();
-
-  // White River (North Border of Pike County)
-  const whiteRiverPoints = [
-    { lat: 38.528, lng: -87.34 },
-    { lat: 38.522, lng: -87.31 },
-    { lat: 38.515, lng: -87.28 },
-    { lat: 38.512, lng: -87.25 },
-    { lat: 38.518, lng: -87.21 },
-    { lat: 38.524, lng: -87.17 }
-  ];
-
-  ctx.strokeStyle = 'rgba(2, 132, 199, 0.7)';
-  ctx.lineWidth = 8;
-  ctx.beginPath();
-  whiteRiverPoints.forEach((pt, i) => {
-    const { x, y } = getCanvasXY(pt.lat, pt.lng, width, height);
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-  ctx.stroke();
-
-  // River water highlights
-  ctx.strokeStyle = '#38bdf8';
-  ctx.lineWidth = 2.5;
-  ctx.stroke();
-
-  // Patoka River (Meandering through south central Pike)
-  const patokaPoints = [
-    { lat: 38.395, lng: -87.35 },
-    { lat: 38.388, lng: -87.30 },
-    { lat: 38.382, lng: -87.26 },
-    { lat: 38.385, lng: -87.21 }, // Winslow mill site
-    { lat: 38.375, lng: -87.17 }
-  ];
-
-  ctx.strokeStyle = 'rgba(14, 116, 144, 0.65)';
-  ctx.lineWidth = 6;
-  ctx.beginPath();
-  patokaPoints.forEach((pt, i) => {
-    const { x, y } = getCanvasXY(pt.lat, pt.lng, width, height);
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-  ctx.stroke();
-
-  // River labels
-  const wrLabel = getCanvasXY(38.517, -87.26, width, height);
-  ctx.fillStyle = '#38bdf8';
-  ctx.font = 'bold 9px "JetBrains Mono", monospace';
-  ctx.fillText('WHITE RIVER (NORTH BOUNDARY)', wrLabel.x - 70, wrLabel.y - 10);
-
-  const prLabel = getCanvasXY(38.385, -87.24, width, height);
-  ctx.fillStyle = '#22d3ee';
-  ctx.fillText('PATOKA RIVER (1835 FLATBOAT ROUTE)', prLabel.x - 75, prLabel.y - 8);
-
-  // The Governor's Trace / Mud Hole Trace path
-  const tracePoints = [
-    { lat: 38.518, lng: -87.31 }, // Decker Ferry
-    { lat: 38.494, lng: -87.273 }, // White Oak Springs
-    { lat: 38.482, lng: -87.23 }, // Long Branch
-    { lat: 38.472, lng: -87.17 } // Toward Mud Holes
-  ];
-
-  ctx.strokeStyle = 'rgba(217, 119, 6, 0.75)';
-  ctx.lineWidth = 3;
-  ctx.setLineDash([5, 4]);
-  ctx.beginPath();
-  tracePoints.forEach((pt, i) => {
-    const { x, y } = getCanvasXY(pt.lat, pt.lng, width, height);
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-  ctx.stroke();
-  ctx.restore();
-}
-
-function drawTargetMarker(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  target: TerrainTarget,
-  isSelected: boolean,
-  isUnderCanopy: boolean
-) {
-  ctx.save();
-
-  // Color theme by verification status
-  let strokeColor = '#38bdf8'; // unverified cyan
-  let fillColor = 'rgba(2, 132, 199, 0.4)';
-  if (target.verificationStatus === 'confirmed') {
-    strokeColor = '#10b981'; // emerald
-    fillColor = 'rgba(16, 185, 129, 0.45)';
-  } else if (target.verificationStatus === 'walkover') {
-    strokeColor = '#f59e0b'; // amber
-    fillColor = 'rgba(245, 158, 11, 0.45)';
-  } else if (target.verificationStatus === 'rejected') {
-    strokeColor = '#f43f5e'; // rose
-    fillColor = 'rgba(244, 63, 94, 0.45)';
-  }
-
-  // Selected pulsing outer ring
-  if (isSelected) {
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(x, y, 22, 0, Math.PI * 2);
-    ctx.stroke();
-
-    ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = 1;
-    ctx.setLineDash([3, 3]);
-    ctx.beginPath();
-    ctx.arc(x, y, 28, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
-
-  // Anomaly micro-relief shape depending on category
-  if (target.category === 'cellar_hole' || target.category === 'blockhouse_fort') {
-    // Square cellar depression
-    ctx.fillStyle = fillColor;
-    ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = 2;
-    ctx.fillRect(x - 9, y - 9, 18, 18);
-    ctx.strokeRect(x - 9, y - 9, 18, 18);
-
-    // Inner cellar pit center
-    ctx.fillStyle = strokeColor;
-    ctx.beginPath();
-    ctx.arc(x, y, 2.5, 0, Math.PI * 2);
-    ctx.fill();
-  } else if (target.category === 'prehistoric_mound') {
-    // Concentric mounded ring
-    ctx.fillStyle = fillColor;
-    ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(x, y, 11, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(x, y, 5, 0, Math.PI * 2);
-    ctx.stroke();
-  } else {
-    // Round waypoint badge
-    ctx.fillStyle = fillColor;
-    ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(x, y, 9, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-  }
-
-  // Name Tag Label
-  ctx.fillStyle = isSelected ? '#ffffff' : '#cbd5e1';
-  ctx.font = isSelected
-    ? 'bold 11px "Plus Jakarta Sans", sans-serif'
-    : '10px "Plus Jakarta Sans", sans-serif';
-  ctx.shadowColor = 'rgba(0,0,0,0.8)';
-  ctx.shadowBlur = 4;
-
-  const displayName = target.name.length > 24 ? target.name.slice(0, 22) + '…' : target.name;
-  ctx.fillText(displayName, x + 14, y + 4);
-
-  // Status tag badge
-  ctx.fillStyle = strokeColor;
-  ctx.font = '8px "JetBrains Mono", monospace';
-  ctx.fillText(target.verificationStatus.toUpperCase(), x + 14, y + 14);
-
-  ctx.restore();
-}
-
-function drawGpsBeacon(ctx: CanvasRenderingContext2D, x: number, y: number, headingDeg: number) {
-  ctx.save();
-
-  // Pulsing outer blue aura
-  const grad = ctx.createRadialGradient(x, y, 4, x, y, 26);
-  grad.addColorStop(0, 'rgba(56, 189, 248, 0.5)');
-  grad.addColorStop(0.6, 'rgba(2, 132, 199, 0.2)');
-  grad.addColorStop(1, 'rgba(2, 132, 199, 0)');
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.arc(x, y, 26, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Compass Heading Cone
-  const headingRad = (headingDeg * Math.PI) / 180;
-  const coneLength = 36;
-  const coneSpread = 0.45;
-
-  ctx.fillStyle = 'rgba(56, 189, 248, 0.25)';
-  ctx.beginPath();
-  ctx.moveTo(x, y);
-  ctx.arc(x, y, coneLength, headingRad - coneSpread, headingRad + coneSpread);
-  ctx.closePath();
-  ctx.fill();
-
-  // Solid Center Beacon Dot
-  ctx.fillStyle = '#38bdf8';
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  ctx.arc(x, y, 8, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-
-  // Inner pinpoint
-  ctx.fillStyle = '#ffffff';
-  ctx.beginPath();
-  ctx.arc(x, y, 2.5, 0, Math.PI * 2);
-  ctx.fill();
-
-  // "YOU (GPS)" Label
-  ctx.fillStyle = '#38bdf8';
-  ctx.font = 'bold 9px "JetBrains Mono", monospace';
-  ctx.fillText('YOU (GPS BEACON)', x - 38, y - 14);
-
-  ctx.restore();
-}
