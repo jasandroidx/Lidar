@@ -9,3 +9,4 @@ __pycache__/
 reviews.db
 .env*
 !.env.example
+dev-dist
