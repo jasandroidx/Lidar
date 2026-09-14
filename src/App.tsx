@@ -30,13 +30,14 @@ import { MarkerDetailPopup } from './components/MarkerDetailPopup';
 import { ChronicleDrawer } from './components/ChronicleDrawer';
 import { PWAInstallButton } from './components/PWAInstallButton';
 import { OfflineIndicator } from './components/OfflineIndicator';
-import { INITIAL_HISTORICAL_TARGETS, PIKE_CENTER_COORDS } from './data/historicalData';
+import { INITIAL_HISTORICAL_TARGETS, INITIAL_GRID_TILES, PIKE_CENTER_COORDS } from './data/historicalData';
 import {
   TerrainTarget,
   VerificationStatus,
   LiDARShaderMode,
   GPSCoordinate,
-  FootstepBreadcrumb
+  FootstepBreadcrumb,
+  ScanGridTile
 } from './types';
 import { playAudioFeedback, triggerHaptic } from './utils/hapticsAndAudio';
 import { downloadGPXFile } from './utils/gpxExporter';
@@ -55,6 +56,42 @@ export default function App() {
     }
     return INITIAL_HISTORICAL_TARGETS;
   });
+
+  // Grokbot Grid Blocks state
+  const [gridTiles, setGridTiles] = useState<ScanGridTile[]>(() => {
+    try {
+      const saved = localStorage.getItem('pike_scan_grid_tiles');
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // Fallback
+    }
+    return INITIAL_GRID_TILES;
+  });
+
+  // Save grid tiles to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('pike_scan_grid_tiles', JSON.stringify(gridTiles));
+    } catch {
+      // Ignore
+    }
+  }, [gridTiles]);
+
+  // Queue a grid tile next handler
+  const handleQueueGridTile = (tileId: string) => {
+    setGridTiles((prev) =>
+      prev.map((tile) => {
+        if (tile.id === tileId) {
+          return {
+            ...tile,
+            status: 'queued',
+            nextScheduledScanTime: 'Priority #1 (Queued by Operator)'
+          };
+        }
+        return tile;
+      })
+    );
+  };
 
   // Selected marker state
   const [selectedTarget, setSelectedTarget] = useState<TerrainTarget | null>(null);
@@ -387,6 +424,8 @@ export default function App() {
           onAddBreadcrumb={(pt) => setBreadcrumbs((prev) => [...prev, pt])}
           isSimulatingWalk={isSimulatingWalk}
           onToggleSimulateWalk={() => setIsSimulatingWalk(!isSimulatingWalk)}
+          gridTiles={gridTiles}
+          onQueueGridTile={handleQueueGridTile}
         />
 
         {/* ------------------------------------------------------------------- */}
@@ -402,7 +441,7 @@ export default function App() {
               <div className="flex items-center gap-2">
                 <Scan className="w-4 h-4 text-emerald-400" />
                 <h3 className="text-sm font-bold font-display text-emerald-100 uppercase tracking-wider">
-                  LiDAR Anomaly Queue ({filteredTargets.length})
+                  LiDAR & Grokbot Hub
                 </h3>
               </div>
               <button
@@ -411,6 +450,43 @@ export default function App() {
               >
                 <X className="w-4 h-4" />
               </button>
+            </div>
+
+            {/* Grokbot Grid Scan Banner */}
+            <div className="p-3 bg-stone-900/90 border-b border-stone-800 text-xs">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="font-mono-tech text-amber-400 font-bold flex items-center gap-1">
+                  <Sparkles className="w-3.5 h-3.5" /> GROKBOT SCAN TILES
+                </span>
+                <span className="text-[10px] font-mono-tech text-stone-400">
+                  {gridTiles.filter((g) => g.status === 'scanned').length} / {gridTiles.length} COMPLETE
+                </span>
+              </div>
+
+              <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+                {gridTiles.map((tile) => (
+                  <button
+                    key={tile.id}
+                    onClick={() => {
+                      playAudioFeedback('lock');
+                      if (tile.status === 'unscanned' || tile.status === 'queued') {
+                        handleQueueGridTile(tile.id);
+                      }
+                    }}
+                    className={`px-2 py-1 rounded text-[10px] font-mono-tech whitespace-nowrap border transition ${
+                      tile.status === 'scanned'
+                        ? 'bg-emerald-950 text-emerald-300 border-emerald-700'
+                        : tile.status === 'scanning'
+                        ? 'bg-amber-950 text-amber-300 border-amber-600 animate-pulse'
+                        : tile.status === 'queued'
+                        ? 'bg-cyan-950 text-cyan-300 border-cyan-700'
+                        : 'bg-stone-800 text-stone-300 border-stone-700 hover:border-amber-500'
+                    }`}
+                  >
+                    {tile.code.split(' ')[0]} ({tile.status})
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Search & Filters */}
