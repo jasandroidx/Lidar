@@ -150,7 +150,9 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
     }
   }, [peelPercent]);
 
-  // 2. Render Target Markers & Homestead Compound Convex Hulls
+  // Bolt Optimization: Consolidate layer rendering into a single atomic pass.
+  // Combines homestead cluster convex hulls and target circle markers into one Effect execution,
+  // preventing double-pass layer teardown and DOM reflow overhead on state changes.
   useEffect(() => {
     const map = mapRef.current;
     const markersGroup = markersGroupRef.current;
@@ -160,7 +162,7 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
     markersGroup.clearLayers();
     hullsGroup.clearLayers();
 
-    // Group targets into Homestead Clusters (for compound hulls)
+    // 1. Group targets into Homestead Clusters (for compound hulls)
     const clusters: { [key: string]: [number, number][] } = {};
     targets.forEach((t) => {
       const clusterKey = t.township || 'General';
@@ -182,15 +184,8 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
         hullsGroup.addLayer(hull);
       }
     });
-  }, [targets, selectedTarget, onSelectTarget]);
 
-
-  // 2b. Render individual Candidate Circle Markers
-  useEffect(() => {
-    const map = mapRef.current;
-    const markersGroup = markersGroupRef.current;
-    if (!map || !markersGroup) return;
-    // Render individual Candidate Circle Markers with multi-attribute styling
+    // 2. Render individual Candidate Circle Markers with multi-attribute styling
     targets.forEach((t) => {
       const isSelected = selectedTarget?.id === t.id;
 
