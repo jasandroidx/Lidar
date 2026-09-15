@@ -11,7 +11,7 @@ export default defineConfig(() => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['apple-touch-icon.png', 'icon.svg', 'lrm_overlay.png', 'grid.geojson', 'overlay_info.json'],
+        includeAssets: ['apple-touch-icon.png', 'icon.svg', 'grid.geojson', 'overlay_info.json'],
         manifest: {
           id: '/',
           name: 'Pike Terrain Radar PWA',
@@ -44,8 +44,27 @@ export default defineConfig(() => {
           ],
         },
         workbox: {
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,json,webmanifest}'],
+          // NEVER precache the LRM pyramid -- county-wide that is ~9 GB of PNGs
+          // and it would be shoved into the service worker on install.
+          // They are cached on demand below instead, which also means the tiles
+          // you actually looked at stay available in the field with no signal.
+          globPatterns: ['**/*.{js,css,html,ico,svg,json,webmanifest}', 'pwa-*.png', 'apple-touch-icon.png'],
+          globIgnores: ['**/lrm_tiles/**'],
+          maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
           runtimeCaching: [
+            {
+              // locally served LRM tiles: cache what the user actually views
+              urlPattern: /\/lrm_tiles\/.*\.png$/,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'lrm-tiles',
+                expiration: {
+                  maxEntries: 3000,
+                  maxAgeSeconds: 60 * 60 * 24 * 90,
+                },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
             {
               urlPattern: /^https:\/\/.*tile\.openstreetmap\.org\/.*$/,
               handler: 'CacheFirst',

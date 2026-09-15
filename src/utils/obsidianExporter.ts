@@ -40,10 +40,10 @@ ${target.chronicleSummary}
 > **Elevation:** ${target.elevationMeters} meters (${Math.round(target.elevationMeters * 3.28084)} ft) MSL  
 > **Field Verification Status:** **${target.verificationStatus.toUpperCase()}**  
 > 
-> ${target.anomalyDescription}
+> ${target.anomalyDescription ?? '_Unsurveyed - no detector run or site visit._'}
 
 ### Observed LiDAR Micro-Features
-${target.lidarFeatures.map((f) => `- [x] ${f}`).join('\n')}
+${(target.lidarFeatures ?? []).map((f) => `- [ ] ${f}`).join('\n')}
 
 ---
 

@@ -30,11 +30,17 @@ export interface TerrainTarget {
   goodspeedPage: number;
   pioneerFamily: string;
   chronicleSummary: string;
-  anomalyDescription: string;
-  lidarFeatures: string[];
+  // Observation fields. Populated ONLY by a real detector run or a real site
+  // visit. Absent means nobody has looked yet -- that is the honest default.
+  anomalyDescription?: string;
+  lidarFeatures?: string[];
   verificationStatus: VerificationStatus;
-  fieldNotes: string;
+  fieldNotes?: string;
   confirmedDate?: string;
+  /** true only once the Goodspeed page cite is checked against goodspeed_fulltext.txt */
+  citationVerified?: boolean;
+  /** burials, mounds, and anything SHAARD restricts: coords are fuzzed, never exported */
+  locationRestricted?: boolean;
   distanceMeters?: number;
   bearingDeg?: number;
 }
