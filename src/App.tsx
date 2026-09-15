@@ -327,11 +327,12 @@ export default function App() {
         <div className="flex items-center gap-2 sm:gap-3">
           <button
             id="btn-toggle-sidebar"
+            aria-label={isSidebarOpen ? 'Close radar sidebar' : 'Open radar sidebar'}
             onClick={() => {
               playAudioFeedback('lock');
               setIsSidebarOpen(!isSidebarOpen);
             }}
-            className="p-1.5 rounded-lg bg-stone-900/80 border border-emerald-800/50 text-emerald-400 hover:text-emerald-200 transition active:scale-95"
+            className="p-1.5 rounded-lg bg-stone-900/80 border border-emerald-800/50 text-emerald-400 hover:text-emerald-200 transition active:scale-95 focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:outline-none"
             title="Toggle Glassmorphic Radar Sidebar"
           >
             {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -446,7 +447,8 @@ export default function App() {
               </div>
               <button
                 onClick={() => setIsSidebarOpen(false)}
-                className="text-stone-400 hover:text-white p-1 rounded-md"
+                aria-label="Close sidebar"
+                className="text-stone-400 hover:text-white p-1 rounded-md focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:outline-none"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -602,7 +604,8 @@ export default function App() {
 
               <button
                 onClick={() => setSelectedTarget(null)}
-                className="text-stone-400 hover:text-white p-1"
+                aria-label="Close target details"
+                className="text-stone-400 hover:text-white p-1 focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:outline-none"
               >
                 <X className="w-4 h-4" />
               </button>

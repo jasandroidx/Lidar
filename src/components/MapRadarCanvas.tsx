@@ -354,7 +354,8 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
       <div className="absolute right-3 bottom-24 md:bottom-6 flex flex-col gap-2 z-20 pointer-events-auto">
         <button
           onClick={onToggleGps}
-          className={`p-3 rounded-xl border shadow-xl backdrop-blur-md transition active:scale-95 flex items-center justify-center ${
+          aria-label={isGpsActive ? 'Deactivate Live GPS' : 'Engage Live GPS'}
+          className={`p-3 rounded-xl border shadow-xl backdrop-blur-md transition active:scale-95 flex items-center justify-center focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:outline-none ${
             isGpsActive
               ? 'bg-blue-600 text-white border-blue-400 shadow-blue-900/50'
               : 'bg-stone-900/80 text-stone-300 border-stone-700 hover:text-white'
@@ -366,7 +367,8 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
 
         <button
           onClick={handleCenterGps}
-          className="p-2.5 rounded-xl bg-stone-900/80 border border-stone-700 text-stone-300 hover:text-white shadow-xl backdrop-blur-md transition active:scale-95"
+          aria-label="Center map on GPS location"
+          className="p-2.5 rounded-xl bg-stone-900/80 border border-stone-700 text-stone-300 hover:text-white shadow-xl backdrop-blur-md transition active:scale-95 focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:outline-none"
           title="Center on GPS Beacon"
         >
           <Crosshair className="w-4 h-4 text-cyan-400" />
@@ -374,7 +376,8 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
 
         <button
           onClick={onToggleSimulateWalk}
-          className={`p-2.5 rounded-xl border shadow-xl backdrop-blur-md transition active:scale-95 ${
+          aria-label={isSimulatingWalk ? 'Pause virtual field walk' : 'Simulate field walk'}
+          className={`p-2.5 rounded-xl border shadow-xl backdrop-blur-md transition active:scale-95 focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:outline-none ${
             isSimulatingWalk
               ? 'bg-amber-600 text-white border-amber-400 animate-pulse'
               : 'bg-stone-900/80 text-stone-300 border-stone-700 hover:text-white'
@@ -386,14 +389,18 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
 
         <button
           onClick={handleZoomIn}
-          className="p-2.5 rounded-xl bg-stone-900/80 border border-stone-700 text-stone-300 hover:text-white shadow-xl backdrop-blur-md transition active:scale-95"
+          aria-label="Zoom in map"
+          className="p-2.5 rounded-xl bg-stone-900/80 border border-stone-700 text-stone-300 hover:text-white shadow-xl backdrop-blur-md transition active:scale-95 focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:outline-none"
+          title="Zoom In"
         >
           <ZoomIn className="w-4 h-4" />
         </button>
 
         <button
           onClick={handleZoomOut}
-          className="p-2.5 rounded-xl bg-stone-900/80 border border-stone-700 text-stone-300 hover:text-white shadow-xl backdrop-blur-md transition active:scale-95"
+          aria-label="Zoom out map"
+          className="p-2.5 rounded-xl bg-stone-900/80 border border-stone-700 text-stone-300 hover:text-white shadow-xl backdrop-blur-md transition active:scale-95 focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:outline-none"
+          title="Zoom Out"
         >
           <ZoomOut className="w-4 h-4" />
         </button>

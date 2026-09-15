@@ -121,11 +121,12 @@ ${EARLY_ROAD_DISTANCES.map((r) => `- **${r.fromLocation}** ➔ **${r.toLocation}
 
           <button
             id="btn-close-chronicle"
+            aria-label="Close chronicle drawer"
             onClick={() => {
               playAudioFeedback('lock');
               onClose();
             }}
-            className="p-1.5 text-stone-400 hover:text-white rounded-lg hover:bg-white/10 transition"
+            className="p-1.5 text-stone-400 hover:text-white rounded-lg hover:bg-white/10 transition focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
           >
             <X className="w-5 h-5" />
           </button>
