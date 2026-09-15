@@ -109,11 +109,12 @@ export const MarkerDetailPopup: React.FC<MarkerDetailPopupProps> = ({
 
           <button
             id="btn-close-marker-popup"
+            aria-label="Close historical dossier"
             onClick={() => {
               playAudioFeedback('lock');
               onClose();
             }}
-            className="p-1.5 text-stone-400 hover:text-white rounded-lg hover:bg-white/10 transition"
+            className="p-1.5 text-stone-400 hover:text-white rounded-lg hover:bg-white/10 transition focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:outline-none"
             title="Close Historical Dossier"
           >
             <X className="w-5 h-5" />
