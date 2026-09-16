@@ -150,7 +150,7 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
     }
   }, [peelPercent]);
 
-  // 2. Render Target Markers & Homestead Compound Convex Hulls
+  // 2. Render Target Markers & Homestead Compound Convex Hulls (unified in single effect to avoid layer duplication)
   useEffect(() => {
     const map = mapRef.current;
     const markersGroup = markersGroupRef.current;
@@ -182,14 +182,7 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
         hullsGroup.addLayer(hull);
       }
     });
-  }, [targets, selectedTarget, onSelectTarget]);
 
-
-  // 2b. Render individual Candidate Circle Markers
-  useEffect(() => {
-    const map = mapRef.current;
-    const markersGroup = markersGroupRef.current;
-    if (!map || !markersGroup) return;
     // Render individual Candidate Circle Markers with multi-attribute styling
     targets.forEach((t) => {
       const isSelected = selectedTarget?.id === t.id;

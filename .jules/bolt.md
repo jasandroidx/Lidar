@@ -1,0 +1,3 @@
+## 2025-05-20 - Decouple Frequent Telemetry Updates From Core Persistent State
+**Learning:** Storing rapidly updating GPS telemetry (e.g. distance/bearing calculations every 1-2s) directly inside a persistent React state array (`targets`) causes severe cascading performance issues: App-wide re-renders, continuous `localStorage.setItem` JSON serialization on every tick, and complete Leaflet layer teardown/recreation.
+**Action:** Compute derived telemetry dynamically via `useMemo` map keyed by target ID and pass telemetry to components reading it, keeping the core persistent state array stable across GPS ticks.
