@@ -154,25 +154,24 @@ export default function App() {
     []
   );
 
-  // Update distances and bearings relative to user GPS
-  useEffect(() => {
-    if (!userGps) return;
-    setTargets((prevTargets) =>
-      prevTargets.map((t) => {
-        const { distance, bearing } = calculateDistanceAndBearing(
+  // Compute distance and bearing relative to user GPS dynamically via memoized Map
+  // (Prevents targets state array mutation & disk write thrashing on every GPS tick)
+  const targetDistancesMap = useMemo(() => {
+    if (!userGps) return new Map<string, { distance: number; bearing: number }>();
+    const map = new Map<string, { distance: number; bearing: number }>();
+    targets.forEach((t) => {
+      map.set(
+        t.id,
+        calculateDistanceAndBearing(
           userGps.latitude,
           userGps.longitude,
           t.latitude,
           t.longitude
-        );
-        return {
-          ...t,
-          distanceMeters: distance,
-          bearingDeg: bearing
-        };
-      })
-    );
-  }, [userGps, calculateDistanceAndBearing]);
+        )
+      );
+    });
+    return map;
+  }, [userGps, targets, calculateDistanceAndBearing]);
 
   // Handle Real Device Geolocation API
   useEffect(() => {
@@ -570,9 +569,9 @@ export default function App() {
                   <div className="flex items-center justify-between text-[11px] font-mono-tech text-stone-400 mt-2">
                     <span>{target.township} Twp</span>
                     <span>{target.dimensionsFeet}</span>
-                    {target.distanceMeters && (
+                    {targetDistancesMap.get(target.id) && (
                       <span className="text-cyan-400 font-bold">
-                        {Math.round(target.distanceMeters)}m
+                        {Math.round(targetDistancesMap.get(target.id)!.distance)}m
                       </span>
                     )}
                   </div>
@@ -611,9 +610,9 @@ export default function App() {
             {/* Quick Distance & Bearing */}
             <div className="flex items-center justify-between text-xs font-mono-tech text-stone-300 my-2.5 p-2 rounded-lg bg-black/40 border border-emerald-900/40">
               <span>EST. SETTLED: {selectedTarget.yearSettled}</span>
-              {selectedTarget.distanceMeters ? (
+              {targetDistancesMap.get(selectedTarget.id) ? (
                 <span className="text-cyan-300 font-bold">
-                  RANGE: {Math.round(selectedTarget.distanceMeters)}m
+                  RANGE: {Math.round(targetDistancesMap.get(selectedTarget.id)!.distance)}m
                 </span>
               ) : (
                 <span className="text-stone-500">Tap GPS to Track</span>
@@ -677,8 +676,8 @@ export default function App() {
       {/* --------------------------------------------------------------------- */}
       <MarkerDetailPopup
         target={selectedTarget}
-        userDistanceMeters={selectedTarget?.distanceMeters}
-        userBearingDeg={selectedTarget?.bearingDeg}
+        userDistanceMeters={selectedTarget ? targetDistancesMap.get(selectedTarget.id)?.distance : undefined}
+        userBearingDeg={selectedTarget ? targetDistancesMap.get(selectedTarget.id)?.bearing : undefined}
         isGpsActive={isGpsActive}
         onClose={() => setIsPopupOpen(false)}
         onStatusChange={handleStatusChange}
