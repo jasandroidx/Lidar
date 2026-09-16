@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Compass,
@@ -46,6 +46,17 @@ export const MarkerDetailPopup: React.FC<MarkerDetailPopupProps> = ({
   const [copiedObsidian, setCopiedObsidian] = useState(false);
   const [activeTab, setActiveTab] = useState<'history' | 'lidar' | 'survey'>('history');
 
+  useEffect(() => {
+    if (!target) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [target, onClose]);
+
   if (!target) return null;
 
   const handleStatusUpdate = (status: VerificationStatus) => {
@@ -80,6 +91,9 @@ export const MarkerDetailPopup: React.FC<MarkerDetailPopupProps> = ({
   return (
     <div
       id="modal-marker-popup"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="marker-popup-title"
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
@@ -101,7 +115,7 @@ export const MarkerDetailPopup: React.FC<MarkerDetailPopupProps> = ({
                   {target.township} Township • Est. {target.yearSettled}
                 </span>
               </div>
-              <h2 className="text-base sm:text-lg font-bold font-display text-emerald-100 tracking-wide mt-0.5">
+              <h2 id="marker-popup-title" className="text-base sm:text-lg font-bold font-display text-emerald-100 tracking-wide mt-0.5">
                 {target.name}
               </h2>
             </div>
@@ -109,6 +123,7 @@ export const MarkerDetailPopup: React.FC<MarkerDetailPopupProps> = ({
 
           <button
             id="btn-close-marker-popup"
+            aria-label="Close historical dossier"
             onClick={() => {
               playAudioFeedback('lock');
               onClose();

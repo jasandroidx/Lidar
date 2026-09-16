@@ -675,20 +675,22 @@ export default function App() {
       {/* --------------------------------------------------------------------- */}
       {/* HISTORICAL MARKER INSPECTOR POPUP MODAL                               */}
       {/* --------------------------------------------------------------------- */}
-      <MarkerDetailPopup
-        target={selectedTarget}
-        userDistanceMeters={selectedTarget?.distanceMeters}
-        userBearingDeg={selectedTarget?.bearingDeg}
-        isGpsActive={isGpsActive}
-        onClose={() => setIsPopupOpen(false)}
-        onStatusChange={handleStatusChange}
-        onLockGpsTarget={(t) => {
-          setLockedTarget(t);
-          setIsPopupOpen(false);
-          setIsGpsActive(true);
-        }}
-        isLockedTarget={lockedTarget?.id === selectedTarget?.id}
-      />
+      {isPopupOpen && (
+        <MarkerDetailPopup
+          target={selectedTarget}
+          userDistanceMeters={selectedTarget?.distanceMeters}
+          userBearingDeg={selectedTarget?.bearingDeg}
+          isGpsActive={isGpsActive}
+          onClose={() => setIsPopupOpen(false)}
+          onStatusChange={handleStatusChange}
+          onLockGpsTarget={(t) => {
+            setLockedTarget(t);
+            setIsPopupOpen(false);
+            setIsGpsActive(true);
+          }}
+          isLockedTarget={lockedTarget?.id === selectedTarget?.id}
+        />
+      )}
 
       {/* --------------------------------------------------------------------- */}
       {/* "WHAT MIGHT HAVE BEEN" CHRONICLE DRAWER (TYPESET STORY + BADGES)     */}
