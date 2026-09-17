@@ -154,25 +154,32 @@ export default function App() {
     []
   );
 
-  // Update distances and bearings relative to user GPS
-  useEffect(() => {
-    if (!userGps) return;
-    setTargets((prevTargets) =>
-      prevTargets.map((t) => {
-        const { distance, bearing } = calculateDistanceAndBearing(
-          userGps.latitude,
-          userGps.longitude,
-          t.latitude,
-          t.longitude
-        );
-        return {
-          ...t,
-          distanceMeters: distance,
-          bearingDeg: bearing
-        };
-      })
-    );
-  }, [userGps, calculateDistanceAndBearing]);
+  // Optimization ⚡ Bolt: Compute distance & bearing dynamically via useMemo.
+  // Avoids calling setTargets on every GPS tick (e.g. every 2s in field walk simulation),
+  // eliminating continuous state updates, unnecessary component re-renders,
+  // and preventing transient GPS values from triggering expensive JSON serialization to localStorage.
+  const targetsWithDistance = useMemo(() => {
+    if (!userGps) return targets;
+    return targets.map((t) => {
+      const { distance, bearing } = calculateDistanceAndBearing(
+        userGps.latitude,
+        userGps.longitude,
+        t.latitude,
+        t.longitude
+      );
+      return {
+        ...t,
+        distanceMeters: distance,
+        bearingDeg: bearing
+      };
+    });
+  }, [targets, userGps, calculateDistanceAndBearing]);
+
+  // Derived selectedTarget with live distance & bearing updates
+  const selectedTargetWithDistance = useMemo(() => {
+    if (!selectedTarget) return null;
+    return targetsWithDistance.find((t) => t.id === selectedTarget.id) || selectedTarget;
+  }, [selectedTarget, targetsWithDistance]);
 
   // Handle Real Device Geolocation API
   useEffect(() => {
@@ -302,7 +309,7 @@ export default function App() {
 
   // Filtered candidate list for sidebar & navigation
   const filteredTargets = useMemo(() => {
-    return targets.filter((t) => {
+    return targetsWithDistance.filter((t) => {
       const matchCat = filterCategory === 'all' || t.category === filterCategory;
       const matchStatus = filterStatus === 'all' || t.verificationStatus === filterStatus;
       const matchSearch =
@@ -312,7 +319,7 @@ export default function App() {
         t.pioneerFamily.toLowerCase().includes(searchQuery.toLowerCase());
       return matchCat && matchStatus && matchSearch;
     });
-  }, [targets, filterCategory, filterStatus, searchQuery]);
+  }, [targetsWithDistance, filterCategory, filterStatus, searchQuery]);
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-[#0d1117] text-stone-100 flex flex-col font-sans-ui">
@@ -376,7 +383,7 @@ export default function App() {
             id="btn-hud-gpx"
             onClick={() => {
               playAudioFeedback('lock');
-              downloadGPXFile(targets);
+              downloadGPXFile(targetsWithDistance);
             }}
             className="px-3 py-1.5 rounded-xl bg-emerald-950/80 hover:bg-emerald-900/80 border border-emerald-600/50 text-xs font-mono-tech text-emerald-300 transition flex items-center gap-1.5 shadow-md active:scale-95"
             title="Export confirmed sites to GPX for onX Hunt / Gaia GPS"
@@ -411,7 +418,7 @@ export default function App() {
       <main className="relative flex-1 w-full h-full overflow-hidden">
         <MapRadarCanvas
           targets={filteredTargets}
-          selectedTarget={selectedTarget}
+          selectedTarget={selectedTargetWithDistance}
           onSelectTarget={handleSelectTarget}
           userGps={userGps}
           isGpsActive={isGpsActive}
@@ -539,7 +546,7 @@ export default function App() {
                   key={target.id}
                   onClick={() => handleSelectTarget(target)}
                   className={`p-3 rounded-xl border transition cursor-pointer ${
-                    selectedTarget?.id === target.id
+                    selectedTargetWithDistance?.id === target.id
                       ? 'bg-emerald-950/80 border-emerald-400 shadow-lg'
                       : 'bg-[#061814]/70 border-stone-800 hover:border-emerald-700/60'
                   }`}
@@ -585,7 +592,7 @@ export default function App() {
         {/* ------------------------------------------------------------------- */}
         {/* MOBILE BOTTOM-SHEET SWIPE CARD (TOUCH-FRIENDLY HITS)               */}
         {/* ------------------------------------------------------------------- */}
-        {selectedTarget && !isPopupOpen && (
+        {selectedTargetWithDistance && !isPopupOpen && (
           <div
             id="mobile-bottom-sheet-card"
             className="absolute bottom-3 left-3 right-3 sm:left-auto sm:right-6 sm:w-96 z-30 p-4 rounded-2xl bg-[#071714]/95 border border-emerald-500/40 backdrop-blur-xl shadow-2xl animate-slide-up"
@@ -593,10 +600,10 @@ export default function App() {
             <div className="flex items-start justify-between gap-2">
               <div>
                 <span className="text-[10px] font-mono-tech uppercase text-emerald-400 font-semibold">
-                  {selectedTarget.category.replace(/_/g, ' ')} • {selectedTarget.township} Twp
+                  {selectedTargetWithDistance.category.replace(/_/g, ' ')} • {selectedTargetWithDistance.township} Twp
                 </span>
                 <h3 className="text-base font-bold font-display text-emerald-100">
-                  {selectedTarget.name}
+                  {selectedTargetWithDistance.name}
                 </h3>
               </div>
 
@@ -610,10 +617,10 @@ export default function App() {
 
             {/* Quick Distance & Bearing */}
             <div className="flex items-center justify-between text-xs font-mono-tech text-stone-300 my-2.5 p-2 rounded-lg bg-black/40 border border-emerald-900/40">
-              <span>EST. SETTLED: {selectedTarget.yearSettled}</span>
-              {selectedTarget.distanceMeters ? (
+              <span>EST. SETTLED: {selectedTargetWithDistance.yearSettled}</span>
+              {selectedTargetWithDistance.distanceMeters ? (
                 <span className="text-cyan-300 font-bold">
-                  RANGE: {Math.round(selectedTarget.distanceMeters)}m
+                  RANGE: {Math.round(selectedTargetWithDistance.distanceMeters)}m
                 </span>
               ) : (
                 <span className="text-stone-500">Tap GPS to Track</span>
@@ -627,10 +634,10 @@ export default function App() {
                 onClick={() => {
                   playAudioFeedback('confirm');
                   triggerHaptic([30, 40, 30]);
-                  handleStatusChange(selectedTarget.id, 'confirmed');
+                  handleStatusChange(selectedTargetWithDistance.id, 'confirmed');
                 }}
                 className={`py-2 px-1 rounded-xl text-xs font-mono-tech font-bold border flex flex-col items-center justify-center gap-1 transition active:scale-95 ${
-                  selectedTarget.verificationStatus === 'confirmed'
+                  selectedTargetWithDistance.verificationStatus === 'confirmed'
                     ? 'bg-emerald-600 border-emerald-400 text-white'
                     : 'bg-emerald-950/50 border-emerald-800 text-emerald-300'
                 }`}
@@ -644,10 +651,10 @@ export default function App() {
                 onClick={() => {
                   playAudioFeedback('walkover');
                   triggerHaptic(40);
-                  handleStatusChange(selectedTarget.id, 'walkover');
+                  handleStatusChange(selectedTargetWithDistance.id, 'walkover');
                 }}
                 className={`py-2 px-1 rounded-xl text-xs font-mono-tech font-bold border flex flex-col items-center justify-center gap-1 transition active:scale-95 ${
-                  selectedTarget.verificationStatus === 'walkover'
+                  selectedTargetWithDistance.verificationStatus === 'walkover'
                     ? 'bg-amber-600 border-amber-400 text-white'
                     : 'bg-amber-950/50 border-amber-800 text-amber-300'
                 }`}
@@ -676,9 +683,9 @@ export default function App() {
       {/* HISTORICAL MARKER INSPECTOR POPUP MODAL                               */}
       {/* --------------------------------------------------------------------- */}
       <MarkerDetailPopup
-        target={selectedTarget}
-        userDistanceMeters={selectedTarget?.distanceMeters}
-        userBearingDeg={selectedTarget?.bearingDeg}
+        target={selectedTargetWithDistance}
+        userDistanceMeters={selectedTargetWithDistance?.distanceMeters}
+        userBearingDeg={selectedTargetWithDistance?.bearingDeg}
         isGpsActive={isGpsActive}
         onClose={() => setIsPopupOpen(false)}
         onStatusChange={handleStatusChange}
@@ -687,7 +694,7 @@ export default function App() {
           setIsPopupOpen(false);
           setIsGpsActive(true);
         }}
-        isLockedTarget={lockedTarget?.id === selectedTarget?.id}
+        isLockedTarget={lockedTarget?.id === selectedTargetWithDistance?.id}
       />
 
       {/* --------------------------------------------------------------------- */}
@@ -696,9 +703,9 @@ export default function App() {
       <ChronicleDrawer
         isOpen={isChronicleOpen}
         onClose={() => setIsChronicleOpen(false)}
-        targets={targets}
+        targets={targetsWithDistance}
         onSelectTargetFromChronicle={(id) => {
-          const t = targets.find((item) => item.id === id);
+          const t = targetsWithDistance.find((item) => item.id === id);
           if (t) {
             setSelectedTarget(t);
             setIsPopupOpen(true);
