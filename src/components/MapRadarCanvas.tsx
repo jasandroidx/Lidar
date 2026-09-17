@@ -288,7 +288,9 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
               playAudioFeedback('peel');
               onPeelChange(0);
             }}
-            className={`px-2 py-1 rounded-lg text-[10px] font-mono-tech transition ${
+            aria-label="Pure LiDAR 100%"
+            aria-pressed={peelPercent === 0}
+            className={`px-2 py-1 rounded-lg text-[10px] font-mono-tech transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
               peelPercent === 0 ? 'bg-cyan-600 text-white font-bold' : 'text-stone-300 hover:bg-white/10'
             }`}
           >
@@ -299,7 +301,9 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
               playAudioFeedback('peel');
               onPeelChange(50);
             }}
-            className={`px-2 py-1 rounded-lg text-[10px] font-mono-tech transition ${
+            aria-label="50/50 LiDAR Canopy blend"
+            aria-pressed={peelPercent === 50}
+            className={`px-2 py-1 rounded-lg text-[10px] font-mono-tech transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
               peelPercent === 50 ? 'bg-emerald-600 text-white font-bold' : 'text-stone-300 hover:bg-white/10'
             }`}
           >
@@ -310,7 +314,9 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
               playAudioFeedback('peel');
               onPeelChange(100);
             }}
-            className={`px-2 py-1 rounded-lg text-[10px] font-mono-tech transition ${
+            aria-label="Canopy satellite layer"
+            aria-pressed={peelPercent === 100}
+            className={`px-2 py-1 rounded-lg text-[10px] font-mono-tech transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
               peelPercent === 100 ? 'bg-emerald-800 text-white font-bold' : 'text-stone-300 hover:bg-white/10'
             }`}
           >
@@ -320,14 +326,19 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
         {/* Dynamic Opacity Slider Controls */}
         <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/75 border border-cyan-900/60 backdrop-blur-md pointer-events-auto text-[11px] font-mono-tech text-cyan-300 shadow-2xl">
           <TreePine className="w-3.5 h-3.5 text-emerald-400" />
-          <span>CANOPY PEEL:</span>
+          <label htmlFor="canopy-peel-slider">CANOPY PEEL:</label>
           <input
+            id="canopy-peel-slider"
             type="range"
             min="0"
             max="100"
             value={peelPercent}
             onChange={(e) => onPeelChange(Number(e.target.value))}
-            className="w-24 accent-emerald-500 cursor-pointer"
+            aria-label="Canopy Peel percentage"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={peelPercent}
+            className="w-24 accent-emerald-500 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
           />
           <span className="w-8 text-right font-bold">{peelPercent}%</span>
         </div>
@@ -354,7 +365,9 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
       <div className="absolute right-3 bottom-24 md:bottom-6 flex flex-col gap-2 z-20 pointer-events-auto">
         <button
           onClick={onToggleGps}
-          className={`p-3 rounded-xl border shadow-xl backdrop-blur-md transition active:scale-95 flex items-center justify-center ${
+          aria-label={isGpsActive ? "Deactivate GPS signal" : "Engage Live GPS"}
+          aria-pressed={isGpsActive}
+          className={`p-3 rounded-xl border shadow-xl backdrop-blur-md transition active:scale-95 flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 ${
             isGpsActive
               ? 'bg-blue-600 text-white border-blue-400 shadow-blue-900/50'
               : 'bg-stone-900/80 text-stone-300 border-stone-700 hover:text-white'
@@ -366,7 +379,8 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
 
         <button
           onClick={handleCenterGps}
-          className="p-2.5 rounded-xl bg-stone-900/80 border border-stone-700 text-stone-300 hover:text-white shadow-xl backdrop-blur-md transition active:scale-95"
+          aria-label="Center map on GPS Beacon"
+          className="p-2.5 rounded-xl bg-stone-900/80 border border-stone-700 text-stone-300 hover:text-white shadow-xl backdrop-blur-md transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
           title="Center on GPS Beacon"
         >
           <Crosshair className="w-4 h-4 text-cyan-400" />
@@ -374,7 +388,9 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
 
         <button
           onClick={onToggleSimulateWalk}
-          className={`p-2.5 rounded-xl border shadow-xl backdrop-blur-md transition active:scale-95 ${
+          aria-label={isSimulatingWalk ? 'Pause Virtual Walk Simulation' : 'Simulate Field Walk'}
+          aria-pressed={isSimulatingWalk}
+          className={`p-2.5 rounded-xl border shadow-xl backdrop-blur-md transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${
             isSimulatingWalk
               ? 'bg-amber-600 text-white border-amber-400 animate-pulse'
               : 'bg-stone-900/80 text-stone-300 border-stone-700 hover:text-white'
@@ -386,14 +402,18 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
 
         <button
           onClick={handleZoomIn}
-          className="p-2.5 rounded-xl bg-stone-900/80 border border-stone-700 text-stone-300 hover:text-white shadow-xl backdrop-blur-md transition active:scale-95"
+          aria-label="Zoom in"
+          className="p-2.5 rounded-xl bg-stone-900/80 border border-stone-700 text-stone-300 hover:text-white shadow-xl backdrop-blur-md transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+          title="Zoom in"
         >
           <ZoomIn className="w-4 h-4" />
         </button>
 
         <button
           onClick={handleZoomOut}
-          className="p-2.5 rounded-xl bg-stone-900/80 border border-stone-700 text-stone-300 hover:text-white shadow-xl backdrop-blur-md transition active:scale-95"
+          aria-label="Zoom out"
+          className="p-2.5 rounded-xl bg-stone-900/80 border border-stone-700 text-stone-300 hover:text-white shadow-xl backdrop-blur-md transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+          title="Zoom out"
         >
           <ZoomOut className="w-4 h-4" />
         </button>

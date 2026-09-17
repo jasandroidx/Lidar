@@ -331,8 +331,10 @@ export default function App() {
               playAudioFeedback('lock');
               setIsSidebarOpen(!isSidebarOpen);
             }}
-            className="p-1.5 rounded-lg bg-stone-900/80 border border-emerald-800/50 text-emerald-400 hover:text-emerald-200 transition active:scale-95"
-            title="Toggle Glassmorphic Radar Sidebar"
+            className="p-1.5 rounded-lg bg-stone-900/80 border border-emerald-800/50 text-emerald-400 hover:text-emerald-200 transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+            title={isSidebarOpen ? "Close Glassmorphic Radar Sidebar" : "Open Glassmorphic Radar Sidebar"}
+            aria-label={isSidebarOpen ? "Close Radar Sidebar" : "Open Radar Sidebar"}
+            aria-expanded={isSidebarOpen}
           >
             {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
