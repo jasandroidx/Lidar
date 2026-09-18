@@ -331,7 +331,9 @@ export default function App() {
               playAudioFeedback('lock');
               setIsSidebarOpen(!isSidebarOpen);
             }}
-            className="p-1.5 rounded-lg bg-stone-900/80 border border-emerald-800/50 text-emerald-400 hover:text-emerald-200 transition active:scale-95"
+            aria-label={isSidebarOpen ? 'Close Radar Sidebar' : 'Open Glassmorphic Radar Sidebar'}
+            aria-expanded={isSidebarOpen}
+            className="p-1.5 rounded-lg bg-stone-900/80 border border-emerald-800/50 text-emerald-400 hover:text-emerald-200 transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
             title="Toggle Glassmorphic Radar Sidebar"
           >
             {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -361,7 +363,8 @@ export default function App() {
           <button
             id="btn-hud-gps"
             onClick={handleToggleGps}
-            className={`px-3 py-1.5 rounded-xl border text-xs font-mono-tech transition flex items-center gap-1.5 shadow-md active:scale-95 ${
+            aria-label={isGpsActive ? 'Disable Field GPS' : 'Enable Field GPS'}
+            className={`px-3 py-1.5 rounded-xl border text-xs font-mono-tech transition flex items-center gap-1.5 shadow-md active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
               isGpsActive
                 ? 'bg-blue-600 border-blue-400 text-white font-bold animate-pulse shadow-blue-900/60'
                 : 'bg-stone-900/80 border-stone-700 text-stone-300 hover:text-white'
@@ -378,7 +381,8 @@ export default function App() {
               playAudioFeedback('lock');
               downloadGPXFile(targets);
             }}
-            className="px-3 py-1.5 rounded-xl bg-emerald-950/80 hover:bg-emerald-900/80 border border-emerald-600/50 text-xs font-mono-tech text-emerald-300 transition flex items-center gap-1.5 shadow-md active:scale-95"
+            aria-label="Export confirmed sites to GPX"
+            className="px-3 py-1.5 rounded-xl bg-emerald-950/80 hover:bg-emerald-900/80 border border-emerald-600/50 text-xs font-mono-tech text-emerald-300 transition flex items-center gap-1.5 shadow-md active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
             title="Export confirmed sites to GPX for onX Hunt / Gaia GPS"
           >
             <Share2 className="w-3.5 h-3.5 text-emerald-400" />
@@ -392,7 +396,8 @@ export default function App() {
               playAudioFeedback('confirm');
               setIsChronicleOpen(true);
             }}
-            className="px-3 py-1.5 rounded-xl bg-amber-950/80 hover:bg-amber-900/80 border border-amber-600/50 text-xs font-mono-tech text-amber-300 transition flex items-center gap-1.5 shadow-md active:scale-95"
+            aria-label="Open 1885 Goodspeed Chronicle"
+            className="px-3 py-1.5 rounded-xl bg-amber-950/80 hover:bg-amber-900/80 border border-amber-600/50 text-xs font-mono-tech text-amber-300 transition flex items-center gap-1.5 shadow-md active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
             title="Open 1885 Goodspeed Chronicle & Pioneer Badges"
           >
             <BookOpen className="w-3.5 h-3.5 text-amber-400" />
