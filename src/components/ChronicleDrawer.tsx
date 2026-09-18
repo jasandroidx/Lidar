@@ -97,6 +97,9 @@ ${EARLY_ROAD_DISTANCES.map((r) => `- **${r.fromLocation}** ➔ **${r.toLocation}
   return (
     <div
       id="drawer-what-might-have-been"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="chronicle-drawer-title"
       className="fixed inset-0 z-50 flex justify-end bg-black/80 backdrop-blur-sm animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
@@ -113,7 +116,10 @@ ${EARLY_ROAD_DISTANCES.map((r) => `- **${r.fromLocation}** ➔ **${r.toLocation}
               <span className="text-[10px] font-mono-tech tracking-widest text-amber-400 uppercase">
                 HISTORICAL TYPESET ARCHIVE • GOODSPEED 1885
               </span>
-              <h2 className="text-lg sm:text-xl font-bold font-display text-amber-100">
+              <h2
+                id="chronicle-drawer-title"
+                className="text-lg sm:text-xl font-bold font-display text-amber-100"
+              >
                 "What Might Have Been" Chronicle
               </h2>
             </div>
@@ -125,7 +131,8 @@ ${EARLY_ROAD_DISTANCES.map((r) => `- **${r.fromLocation}** ➔ **${r.toLocation}
               playAudioFeedback('lock');
               onClose();
             }}
-            className="p-1.5 text-stone-400 hover:text-white rounded-lg hover:bg-white/10 transition"
+            aria-label="Close Chronicle Drawer"
+            className="p-1.5 text-stone-400 hover:text-white rounded-lg hover:bg-white/10 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
           >
             <X className="w-5 h-5" />
           </button>

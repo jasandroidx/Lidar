@@ -80,6 +80,9 @@ export const MarkerDetailPopup: React.FC<MarkerDetailPopupProps> = ({
   return (
     <div
       id="modal-marker-popup"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="marker-popup-title"
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
@@ -101,7 +104,10 @@ export const MarkerDetailPopup: React.FC<MarkerDetailPopupProps> = ({
                   {target.township} Township • Est. {target.yearSettled}
                 </span>
               </div>
-              <h2 className="text-base sm:text-lg font-bold font-display text-emerald-100 tracking-wide mt-0.5">
+              <h2
+                id="marker-popup-title"
+                className="text-base sm:text-lg font-bold font-display text-emerald-100 tracking-wide mt-0.5"
+              >
                 {target.name}
               </h2>
             </div>
@@ -113,7 +119,8 @@ export const MarkerDetailPopup: React.FC<MarkerDetailPopupProps> = ({
               playAudioFeedback('lock');
               onClose();
             }}
-            className="p-1.5 text-stone-400 hover:text-white rounded-lg hover:bg-white/10 transition"
+            aria-label="Close Historical Dossier"
+            className="p-1.5 text-stone-400 hover:text-white rounded-lg hover:bg-white/10 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
             title="Close Historical Dossier"
           >
             <X className="w-5 h-5" />

@@ -326,8 +326,12 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
             min="0"
             max="100"
             value={peelPercent}
+            aria-label="Canopy Peel percentage"
+            aria-valuenow={peelPercent}
+            aria-valuemin={0}
+            aria-valuemax={100}
             onChange={(e) => onPeelChange(Number(e.target.value))}
-            className="w-24 accent-emerald-500 cursor-pointer"
+            className="w-24 accent-emerald-500 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 rounded"
           />
           <span className="w-8 text-right font-bold">{peelPercent}%</span>
         </div>
@@ -354,7 +358,8 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
       <div className="absolute right-3 bottom-24 md:bottom-6 flex flex-col gap-2 z-20 pointer-events-auto">
         <button
           onClick={onToggleGps}
-          className={`p-3 rounded-xl border shadow-xl backdrop-blur-md transition active:scale-95 flex items-center justify-center ${
+          aria-label={isGpsActive ? 'Disable Live GPS Tracking' : 'Engage Live GPS Tracking'}
+          className={`p-3 rounded-xl border shadow-xl backdrop-blur-md transition active:scale-95 flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
             isGpsActive
               ? 'bg-blue-600 text-white border-blue-400 shadow-blue-900/50'
               : 'bg-stone-900/80 text-stone-300 border-stone-700 hover:text-white'
@@ -366,7 +371,8 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
 
         <button
           onClick={handleCenterGps}
-          className="p-2.5 rounded-xl bg-stone-900/80 border border-stone-700 text-stone-300 hover:text-white shadow-xl backdrop-blur-md transition active:scale-95"
+          aria-label="Center map on GPS beacon"
+          className="p-2.5 rounded-xl bg-stone-900/80 border border-stone-700 text-stone-300 hover:text-white shadow-xl backdrop-blur-md transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
           title="Center on GPS Beacon"
         >
           <Crosshair className="w-4 h-4 text-cyan-400" />
@@ -374,7 +380,8 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
 
         <button
           onClick={onToggleSimulateWalk}
-          className={`p-2.5 rounded-xl border shadow-xl backdrop-blur-md transition active:scale-95 ${
+          aria-label={isSimulatingWalk ? 'Pause Virtual Field Walk' : 'Simulate Field Walk'}
+          className={`p-2.5 rounded-xl border shadow-xl backdrop-blur-md transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
             isSimulatingWalk
               ? 'bg-amber-600 text-white border-amber-400 animate-pulse'
               : 'bg-stone-900/80 text-stone-300 border-stone-700 hover:text-white'
@@ -386,14 +393,18 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
 
         <button
           onClick={handleZoomIn}
-          className="p-2.5 rounded-xl bg-stone-900/80 border border-stone-700 text-stone-300 hover:text-white shadow-xl backdrop-blur-md transition active:scale-95"
+          aria-label="Zoom in"
+          className="p-2.5 rounded-xl bg-stone-900/80 border border-stone-700 text-stone-300 hover:text-white shadow-xl backdrop-blur-md transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+          title="Zoom in"
         >
           <ZoomIn className="w-4 h-4" />
         </button>
 
         <button
           onClick={handleZoomOut}
-          className="p-2.5 rounded-xl bg-stone-900/80 border border-stone-700 text-stone-300 hover:text-white shadow-xl backdrop-blur-md transition active:scale-95"
+          aria-label="Zoom out"
+          className="p-2.5 rounded-xl bg-stone-900/80 border border-stone-700 text-stone-300 hover:text-white shadow-xl backdrop-blur-md transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+          title="Zoom out"
         >
           <ZoomOut className="w-4 h-4" />
         </button>
