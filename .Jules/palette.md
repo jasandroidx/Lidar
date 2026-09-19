@@ -1,0 +1,3 @@
+## 2025-05-20 - Modal Dialog Accessibility and Keyboard Dismissal
+**Learning:** In GIS and HUD-style map interfaces with floating overlay dossiers, modal dialogs often lack standard keyboard dismiss capability (`Escape` key) and proper ARIA semantics (`role="dialog"`, `aria-modal="true"`, `aria-labelledby`, `role="tablist"`/`role="tab"`). This blocks keyboard-only navigation and screen reader users from closing or navigating detail overlays.
+**Action:** Always attach a global `Escape` key event listener in modal overlays, provide explicit `aria-label` attributes for icon-only close buttons, and structure tabbed panels with `role="tablist"`, `role="tab"`, and `aria-selected`.
