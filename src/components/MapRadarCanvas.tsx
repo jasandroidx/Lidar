@@ -327,6 +327,7 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
             max="100"
             value={peelPercent}
             onChange={(e) => onPeelChange(Number(e.target.value))}
+            aria-label="Canopy peel opacity percentage"
             className="w-24 accent-emerald-500 cursor-pointer"
           />
           <span className="w-8 text-right font-bold">{peelPercent}%</span>

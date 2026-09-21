@@ -353,7 +353,9 @@ export default function App() {
               playAudioFeedback('lock');
               setIsSidebarOpen(!isSidebarOpen);
             }}
-            className="p-1.5 rounded-lg bg-stone-900/80 border border-emerald-800/50 text-emerald-400 hover:text-emerald-200 transition active:scale-95"
+            aria-label="Toggle Glassmorphic Radar Sidebar"
+            aria-expanded={isSidebarOpen}
+            className="p-1.5 rounded-lg bg-stone-900/80 border border-emerald-800/50 text-emerald-400 hover:text-emerald-200 transition active:scale-95 focus-visible:ring-2 focus-visible:ring-emerald-400 focus:outline-none"
             title="Toggle Glassmorphic Radar Sidebar"
           >
             {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -414,7 +416,8 @@ export default function App() {
               playAudioFeedback('confirm');
               setIsChronicleOpen(true);
             }}
-            className="px-3 py-1.5 rounded-xl bg-amber-950/80 hover:bg-amber-900/80 border border-amber-600/50 text-xs font-mono-tech text-amber-300 transition flex items-center gap-1.5 shadow-md active:scale-95"
+            aria-label="Open 1885 Goodspeed Chronicle & Pioneer Badges"
+            className="px-3 py-1.5 rounded-xl bg-amber-950/80 hover:bg-amber-900/80 border border-amber-600/50 text-xs font-mono-tech text-amber-300 transition flex items-center gap-1.5 shadow-md active:scale-95 focus-visible:ring-2 focus-visible:ring-amber-400 focus:outline-none"
             title="Open 1885 Goodspeed Chronicle & Pioneer Badges"
           >
             <BookOpen className="w-3.5 h-3.5 text-amber-400" />
@@ -468,7 +471,8 @@ export default function App() {
               </div>
               <button
                 onClick={() => setIsSidebarOpen(false)}
-                className="text-stone-400 hover:text-white p-1 rounded-md"
+                aria-label="Close LiDAR & Grokbot Hub sidebar"
+                className="text-stone-400 hover:text-white p-1 rounded-md focus-visible:ring-2 focus-visible:ring-emerald-400 focus:outline-none"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -624,7 +628,8 @@ export default function App() {
 
               <button
                 onClick={() => setSelectedTarget(null)}
-                className="text-stone-400 hover:text-white p-1"
+                aria-label="Close candidate summary"
+                className="text-stone-400 hover:text-white p-1 focus-visible:ring-2 focus-visible:ring-emerald-400 focus:outline-none"
               >
                 <X className="w-4 h-4" />
               </button>
