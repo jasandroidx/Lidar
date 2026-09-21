@@ -154,25 +154,29 @@ export default function App() {
     []
   );
 
-  // Update distances and bearings relative to user GPS
-  useEffect(() => {
-    if (!userGps) return;
-    setTargets((prevTargets) =>
-      prevTargets.map((t) => {
-        const { distance, bearing } = calculateDistanceAndBearing(
-          userGps.latitude,
-          userGps.longitude,
-          t.latitude,
-          t.longitude
-        );
-        return {
-          ...t,
-          distanceMeters: distance,
-          bearingDeg: bearing
-        };
-      })
-    );
-  }, [userGps, calculateDistanceAndBearing]);
+  // Compute targets with updated distance and bearing relative to user GPS without mutating base state or triggering localStorage thrashing
+  const targetsWithDistance = useMemo(() => {
+    if (!userGps) return targets;
+    return targets.map((t) => {
+      const { distance, bearing } = calculateDistanceAndBearing(
+        userGps.latitude,
+        userGps.longitude,
+        t.latitude,
+        t.longitude
+      );
+      return {
+        ...t,
+        distanceMeters: distance,
+        bearingDeg: bearing
+      };
+    });
+  }, [targets, userGps, calculateDistanceAndBearing]);
+
+  // Derived selected target with current distance/bearing
+  const selectedTargetWithDistance = useMemo(() => {
+    if (!selectedTarget) return null;
+    return targetsWithDistance.find((t) => t.id === selectedTarget.id) || selectedTarget;
+  }, [selectedTarget, targetsWithDistance]);
 
   // Handle Real Device Geolocation API
   useEffect(() => {
@@ -300,7 +304,7 @@ export default function App() {
     setIsPopupOpen(true);
   };
 
-  // Filtered candidate list for sidebar & navigation
+  // Filtered candidate list for sidebar & navigation (stable array reference across GPS ticks)
   const filteredTargets = useMemo(() => {
     return targets.filter((t) => {
       const matchCat = filterCategory === 'all' || t.category === filterCategory;
@@ -313,6 +317,24 @@ export default function App() {
       return matchCat && matchStatus && matchSearch;
     });
   }, [targets, filterCategory, filterStatus, searchQuery]);
+
+  // Filtered candidate list augmented with current relative GPS distance & bearing
+  const filteredTargetsWithDistance = useMemo(() => {
+    if (!userGps) return filteredTargets;
+    return filteredTargets.map((t) => {
+      const { distance, bearing } = calculateDistanceAndBearing(
+        userGps.latitude,
+        userGps.longitude,
+        t.latitude,
+        t.longitude
+      );
+      return {
+        ...t,
+        distanceMeters: distance,
+        bearingDeg: bearing
+      };
+    });
+  }, [filteredTargets, userGps, calculateDistanceAndBearing]);
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-[#0d1117] text-stone-100 flex flex-col font-sans-ui">
@@ -411,7 +433,7 @@ export default function App() {
       <main className="relative flex-1 w-full h-full overflow-hidden">
         <MapRadarCanvas
           targets={filteredTargets}
-          selectedTarget={selectedTarget}
+          selectedTarget={selectedTargetWithDistance}
           onSelectTarget={handleSelectTarget}
           userGps={userGps}
           isGpsActive={isGpsActive}
@@ -534,7 +556,7 @@ export default function App() {
 
             {/* Candidate List */}
             <div className="flex-1 overflow-y-auto p-3 space-y-2">
-              {filteredTargets.map((target) => (
+              {filteredTargetsWithDistance.map((target) => (
                 <div
                   key={target.id}
                   onClick={() => handleSelectTarget(target)}
@@ -585,7 +607,7 @@ export default function App() {
         {/* ------------------------------------------------------------------- */}
         {/* MOBILE BOTTOM-SHEET SWIPE CARD (TOUCH-FRIENDLY HITS)               */}
         {/* ------------------------------------------------------------------- */}
-        {selectedTarget && !isPopupOpen && (
+        {selectedTargetWithDistance && !isPopupOpen && (
           <div
             id="mobile-bottom-sheet-card"
             className="absolute bottom-3 left-3 right-3 sm:left-auto sm:right-6 sm:w-96 z-30 p-4 rounded-2xl bg-[#071714]/95 border border-emerald-500/40 backdrop-blur-xl shadow-2xl animate-slide-up"
@@ -593,10 +615,10 @@ export default function App() {
             <div className="flex items-start justify-between gap-2">
               <div>
                 <span className="text-[10px] font-mono-tech uppercase text-emerald-400 font-semibold">
-                  {selectedTarget.category.replace(/_/g, ' ')} • {selectedTarget.township} Twp
+                  {selectedTargetWithDistance.category.replace(/_/g, ' ')} • {selectedTargetWithDistance.township} Twp
                 </span>
                 <h3 className="text-base font-bold font-display text-emerald-100">
-                  {selectedTarget.name}
+                  {selectedTargetWithDistance.name}
                 </h3>
               </div>
 
@@ -610,10 +632,10 @@ export default function App() {
 
             {/* Quick Distance & Bearing */}
             <div className="flex items-center justify-between text-xs font-mono-tech text-stone-300 my-2.5 p-2 rounded-lg bg-black/40 border border-emerald-900/40">
-              <span>EST. SETTLED: {selectedTarget.yearSettled}</span>
-              {selectedTarget.distanceMeters ? (
+              <span>EST. SETTLED: {selectedTargetWithDistance.yearSettled}</span>
+              {selectedTargetWithDistance.distanceMeters ? (
                 <span className="text-cyan-300 font-bold">
-                  RANGE: {Math.round(selectedTarget.distanceMeters)}m
+                  RANGE: {Math.round(selectedTargetWithDistance.distanceMeters)}m
                 </span>
               ) : (
                 <span className="text-stone-500">Tap GPS to Track</span>
@@ -627,10 +649,10 @@ export default function App() {
                 onClick={() => {
                   playAudioFeedback('confirm');
                   triggerHaptic([30, 40, 30]);
-                  handleStatusChange(selectedTarget.id, 'confirmed');
+                  handleStatusChange(selectedTargetWithDistance.id, 'confirmed');
                 }}
                 className={`py-2 px-1 rounded-xl text-xs font-mono-tech font-bold border flex flex-col items-center justify-center gap-1 transition active:scale-95 ${
-                  selectedTarget.verificationStatus === 'confirmed'
+                  selectedTargetWithDistance.verificationStatus === 'confirmed'
                     ? 'bg-emerald-600 border-emerald-400 text-white'
                     : 'bg-emerald-950/50 border-emerald-800 text-emerald-300'
                 }`}
@@ -644,10 +666,10 @@ export default function App() {
                 onClick={() => {
                   playAudioFeedback('walkover');
                   triggerHaptic(40);
-                  handleStatusChange(selectedTarget.id, 'walkover');
+                  handleStatusChange(selectedTargetWithDistance.id, 'walkover');
                 }}
                 className={`py-2 px-1 rounded-xl text-xs font-mono-tech font-bold border flex flex-col items-center justify-center gap-1 transition active:scale-95 ${
-                  selectedTarget.verificationStatus === 'walkover'
+                  selectedTargetWithDistance.verificationStatus === 'walkover'
                     ? 'bg-amber-600 border-amber-400 text-white'
                     : 'bg-amber-950/50 border-amber-800 text-amber-300'
                 }`}
@@ -676,9 +698,9 @@ export default function App() {
       {/* HISTORICAL MARKER INSPECTOR POPUP MODAL                               */}
       {/* --------------------------------------------------------------------- */}
       <MarkerDetailPopup
-        target={selectedTarget}
-        userDistanceMeters={selectedTarget?.distanceMeters}
-        userBearingDeg={selectedTarget?.bearingDeg}
+        target={selectedTargetWithDistance}
+        userDistanceMeters={selectedTargetWithDistance?.distanceMeters}
+        userBearingDeg={selectedTargetWithDistance?.bearingDeg}
         isGpsActive={isGpsActive}
         onClose={() => setIsPopupOpen(false)}
         onStatusChange={handleStatusChange}
