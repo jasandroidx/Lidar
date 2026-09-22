@@ -92,6 +92,7 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
   const hullsGroupRef = useRef<L.LayerGroup | null>(null);
   const gpsMarkerRef = useRef<L.CircleMarker | null>(null);
   const breadcrumbPolylineRef = useRef<L.Polyline | null>(null);
+  const markerMapRef = useRef<Map<string, L.CircleMarker>>(new Map());
 
   // 1. Initialize Leaflet map instance with preferCanvas: true
   useEffect(() => {
@@ -150,17 +151,18 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
     }
   }, [peelPercent]);
 
-  // 2. Render Target Markers & Homestead Compound Convex Hulls
+  // Primitive target selection ID to prevent object reference churn across GPS updates
+  const selectedTargetId = selectedTarget?.id;
+
+  // 2. Render Target Markers & Homestead Compound Convex Hulls efficiently
   useEffect(() => {
     const map = mapRef.current;
     const markersGroup = markersGroupRef.current;
     const hullsGroup = hullsGroupRef.current;
     if (!map || !markersGroup || !hullsGroup) return;
 
-    markersGroup.clearLayers();
+    // Draw Convex Hulls for homestead clusters
     hullsGroup.clearLayers();
-
-    // Group targets into Homestead Clusters (for compound hulls)
     const clusters: { [key: string]: [number, number][] } = {};
     targets.forEach((t) => {
       const clusterKey = t.township || 'General';
@@ -168,7 +170,6 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
       clusters[clusterKey].push([t.latitude, t.longitude]);
     });
 
-    // Draw Hull Polygons for clusters with >= 3 targets
     Object.entries(clusters).forEach(([key, pts]) => {
       if (pts.length >= 3) {
         const hullCoords = getConvexHull(pts);
@@ -182,17 +183,20 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
         hullsGroup.addLayer(hull);
       }
     });
-  }, [targets, selectedTarget, onSelectTarget]);
 
+    // Reuse existing Leaflet markers and update styles dynamically via setStyle/setRadius.
+    // Prevents tearing down all map marker DOM elements and tooltips on every GPS update/selection.
+    const activeTargetIds = new Set(targets.map((t) => t.id));
 
-  // 2b. Render individual Candidate Circle Markers
-  useEffect(() => {
-    const map = mapRef.current;
-    const markersGroup = markersGroupRef.current;
-    if (!map || !markersGroup) return;
-    // Render individual Candidate Circle Markers with multi-attribute styling
+    markerMapRef.current.forEach((marker, id) => {
+      if (!activeTargetIds.has(id)) {
+        markersGroup.removeLayer(marker);
+        markerMapRef.current.delete(id);
+      }
+    });
+
     targets.forEach((t) => {
-      const isSelected = selectedTarget?.id === t.id;
+      const isSelected = selectedTargetId === t.id;
 
       let color = '#38bdf8'; // unverified cyan
       let fillColor = '#0284c7';
@@ -207,29 +211,43 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
         fillColor = '#e11d48';
       }
 
-      const circle = L.circleMarker([t.latitude, t.longitude], {
-        radius: isSelected ? 12 : 8,
-        color: isSelected ? '#ffffff' : color,
-        weight: isSelected ? 3 : 2,
-        fillColor: fillColor,
-        fillOpacity: 0.8
-      });
+      const existingMarker = markerMapRef.current.get(t.id);
 
-      circle.on('click', () => {
-        playAudioFeedback('lock');
-        triggerHaptic(30);
-        onSelectTarget(t);
-      });
+      if (existingMarker) {
+        existingMarker.setStyle({
+          color: isSelected ? '#ffffff' : color,
+          weight: isSelected ? 3 : 2,
+          fillColor: fillColor,
+          fillOpacity: 0.8
+        });
+        existingMarker.setRadius(isSelected ? 12 : 8);
+      } else {
+        const circle = L.circleMarker([t.latitude, t.longitude], {
+          radius: isSelected ? 12 : 8,
+          color: isSelected ? '#ffffff' : color,
+          weight: isSelected ? 3 : 2,
+          fillColor: fillColor,
+          fillOpacity: 0.8
+        });
 
-      circle.bindTooltip(t.name, {
-        permanent: false,
-        direction: 'top',
-        className: 'bg-stone-900 border border-emerald-500 text-stone-100 text-xs px-2 py-1 rounded shadow-md font-sans-ui'
-      });
+        circle.on('click', () => {
+          playAudioFeedback('lock');
+          triggerHaptic(30);
+          onSelectTarget(t);
+        });
 
-      markersGroup.addLayer(circle);
+        circle.bindTooltip(t.name, {
+          permanent: false,
+          direction: 'top',
+          className:
+            'bg-stone-900 border border-emerald-500 text-stone-100 text-xs px-2 py-1 rounded shadow-md font-sans-ui'
+        });
+
+        markersGroup.addLayer(circle);
+        markerMapRef.current.set(t.id, circle);
+      }
     });
-  }, [targets, selectedTarget, onSelectTarget]);
+  }, [targets, selectedTargetId, onSelectTarget]);
 
   // 3. Render Live User GPS Marker
   useEffect(() => {

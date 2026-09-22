@@ -304,7 +304,23 @@ export default function App() {
     setIsPopupOpen(true);
   };
 
-  // Filtered candidate list for sidebar & navigation (stable array reference across GPS ticks)
+  // Filtered candidate list augmented with current relative GPS distance & bearing.
+  // Performance optimization: Filter directly from targetsWithDistance to eliminate
+  // redundant O(N) Haversine trigonometric computations on every high-frequency GPS tick.
+  const filteredTargetsWithDistance = useMemo(() => {
+    return targetsWithDistance.filter((t) => {
+      const matchCat = filterCategory === 'all' || t.category === filterCategory;
+      const matchStatus = filterStatus === 'all' || t.verificationStatus === filterStatus;
+      const matchSearch =
+        searchQuery === '' ||
+        t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.township.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.pioneerFamily.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchCat && matchStatus && matchSearch;
+    });
+  }, [targetsWithDistance, filterCategory, filterStatus, searchQuery]);
+
+  // Filtered candidate list without GPS calculation overhead, used for map canvas markers
   const filteredTargets = useMemo(() => {
     return targets.filter((t) => {
       const matchCat = filterCategory === 'all' || t.category === filterCategory;
@@ -317,24 +333,6 @@ export default function App() {
       return matchCat && matchStatus && matchSearch;
     });
   }, [targets, filterCategory, filterStatus, searchQuery]);
-
-  // Filtered candidate list augmented with current relative GPS distance & bearing
-  const filteredTargetsWithDistance = useMemo(() => {
-    if (!userGps) return filteredTargets;
-    return filteredTargets.map((t) => {
-      const { distance, bearing } = calculateDistanceAndBearing(
-        userGps.latitude,
-        userGps.longitude,
-        t.latitude,
-        t.longitude
-      );
-      return {
-        ...t,
-        distanceMeters: distance,
-        bearingDeg: bearing
-      };
-    });
-  }, [filteredTargets, userGps, calculateDistanceAndBearing]);
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-[#0d1117] text-stone-100 flex flex-col font-sans-ui">
