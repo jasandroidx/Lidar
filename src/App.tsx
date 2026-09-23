@@ -522,6 +522,7 @@ export default function App() {
                 <input
                   type="text"
                   placeholder="Search cellar, township, pioneer..."
+                  aria-label="Search targets by cellar, township, or pioneer family"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-stone-900 border border-stone-700 text-xs font-mono-tech text-stone-100 focus:outline-none focus:border-emerald-400"
@@ -532,6 +533,7 @@ export default function App() {
                 <select
                   value={filterCategory}
                   onChange={(e) => setFilterCategory(e.target.value)}
+                  aria-label="Filter targets by category"
                   className="flex-1 bg-stone-900 border border-stone-700 rounded-md p-1.5 text-stone-300"
                 >
                   <option value="all">ALL CATEGORIES</option>
@@ -547,6 +549,7 @@ export default function App() {
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
+                  aria-label="Filter targets by verification status"
                   className="flex-1 bg-stone-900 border border-stone-700 rounded-md p-1.5 text-stone-300"
                 >
                   <option value="all">ALL STATUSES</option>
