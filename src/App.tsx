@@ -434,9 +434,11 @@ export default function App() {
       {/* MAIN VIEWPORT CANVAS: ESRI WORLD IMAGERY + CANOPY PEEL OVERLAY        */}
       {/* --------------------------------------------------------------------- */}
       <main className="relative flex-1 w-full h-full overflow-hidden">
+        {/* Bolt Optimization: Pass stable selectedTarget to MapRadarCanvas instead of selectedTargetWithDistance */}
+        {/* to prevent tearing down and re-creating Leaflet circle markers on high-frequency 1-2Hz GPS ticks. */}
         <MapRadarCanvas
           targets={filteredTargets}
-          selectedTarget={selectedTargetWithDistance}
+          selectedTarget={selectedTarget}
           onSelectTarget={handleSelectTarget}
           userGps={userGps}
           isGpsActive={isGpsActive}

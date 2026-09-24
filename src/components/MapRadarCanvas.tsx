@@ -150,14 +150,13 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
     }
   }, [peelPercent]);
 
-  // 2. Render Target Markers & Homestead Compound Convex Hulls
+  // 2. Render Homestead Compound Convex Hulls
+  // Bolt Optimization: Decouple hull rendering from selectedTarget to avoid rebuilding hulls on selection changes.
   useEffect(() => {
     const map = mapRef.current;
-    const markersGroup = markersGroupRef.current;
     const hullsGroup = hullsGroupRef.current;
-    if (!map || !markersGroup || !hullsGroup) return;
+    if (!map || !hullsGroup) return;
 
-    markersGroup.clearLayers();
     hullsGroup.clearLayers();
 
     // Group targets into Homestead Clusters (for compound hulls)
@@ -182,17 +181,23 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
         hullsGroup.addLayer(hull);
       }
     });
-  }, [targets, selectedTarget, onSelectTarget]);
-
+  }, [targets]);
 
   // 2b. Render individual Candidate Circle Markers
+  // Bolt Optimization: Extract selectedTargetId to depend on target ID rather than volatile object references
+  // (e.g. selectedTargetWithDistance which changes reference on 1-2Hz GPS ticks).
+  const selectedTargetId = selectedTarget?.id;
+
   useEffect(() => {
     const map = mapRef.current;
     const markersGroup = markersGroupRef.current;
     if (!map || !markersGroup) return;
+
+    markersGroup.clearLayers();
+
     // Render individual Candidate Circle Markers with multi-attribute styling
     targets.forEach((t) => {
-      const isSelected = selectedTarget?.id === t.id;
+      const isSelected = selectedTargetId === t.id;
 
       let color = '#38bdf8'; // unverified cyan
       let fillColor = '#0284c7';
@@ -229,7 +234,7 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
 
       markersGroup.addLayer(circle);
     });
-  }, [targets, selectedTarget, onSelectTarget]);
+  }, [targets, selectedTargetId, onSelectTarget]);
 
   // 3. Render Live User GPS Marker
   useEffect(() => {
