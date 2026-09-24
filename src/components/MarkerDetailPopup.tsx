@@ -113,7 +113,8 @@ export const MarkerDetailPopup: React.FC<MarkerDetailPopupProps> = ({
               playAudioFeedback('lock');
               onClose();
             }}
-            className="p-1.5 text-stone-400 hover:text-white rounded-lg hover:bg-white/10 transition"
+            aria-label="Close Historical Dossier"
+            className="p-1.5 text-stone-400 hover:text-white rounded-lg hover:bg-white/10 transition focus-visible:ring-2 focus-visible:ring-emerald-400 focus:outline-none"
             title="Close Historical Dossier"
           >
             <X className="w-5 h-5" />
@@ -147,11 +148,13 @@ export const MarkerDetailPopup: React.FC<MarkerDetailPopupProps> = ({
         </div>
 
         {/* Tab switcher */}
-        <div className="flex border-b border-stone-800 bg-[#051411]">
+        <div role="tablist" aria-label="Historical dossier views" className="flex border-b border-stone-800 bg-[#051411]">
           <button
             id="tab-history"
+            role="tab"
+            aria-selected={activeTab === 'history'}
             onClick={() => setActiveTab('history')}
-            className={`flex-1 py-2.5 text-xs font-mono-tech tracking-wider text-center border-b-2 transition ${
+            className={`flex-1 py-2.5 text-xs font-mono-tech tracking-wider text-center border-b-2 transition focus-visible:ring-2 focus-visible:ring-emerald-400 focus:outline-none ${
               activeTab === 'history'
                 ? 'border-emerald-400 text-emerald-300 bg-emerald-950/40 font-bold'
                 : 'border-transparent text-stone-400 hover:text-stone-200'
@@ -162,8 +165,10 @@ export const MarkerDetailPopup: React.FC<MarkerDetailPopupProps> = ({
           </button>
           <button
             id="tab-lidar"
+            role="tab"
+            aria-selected={activeTab === 'lidar'}
             onClick={() => setActiveTab('lidar')}
-            className={`flex-1 py-2.5 text-xs font-mono-tech tracking-wider text-center border-b-2 transition ${
+            className={`flex-1 py-2.5 text-xs font-mono-tech tracking-wider text-center border-b-2 transition focus-visible:ring-2 focus-visible:ring-emerald-400 focus:outline-none ${
               activeTab === 'lidar'
                 ? 'border-cyan-400 text-cyan-300 bg-cyan-950/40 font-bold'
                 : 'border-transparent text-stone-400 hover:text-stone-200'
@@ -174,8 +179,10 @@ export const MarkerDetailPopup: React.FC<MarkerDetailPopupProps> = ({
           </button>
           <button
             id="tab-survey"
+            role="tab"
+            aria-selected={activeTab === 'survey'}
             onClick={() => setActiveTab('survey')}
-            className={`flex-1 py-2.5 text-xs font-mono-tech tracking-wider text-center border-b-2 transition ${
+            className={`flex-1 py-2.5 text-xs font-mono-tech tracking-wider text-center border-b-2 transition focus-visible:ring-2 focus-visible:ring-emerald-400 focus:outline-none ${
               activeTab === 'survey'
                 ? 'border-amber-400 text-amber-300 bg-amber-950/40 font-bold'
                 : 'border-transparent text-stone-400 hover:text-stone-200'
