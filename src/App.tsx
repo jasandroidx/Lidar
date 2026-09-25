@@ -385,7 +385,9 @@ export default function App() {
           <button
             id="btn-hud-gps"
             onClick={handleToggleGps}
-            className={`px-3 py-1.5 rounded-xl border text-xs font-mono-tech transition flex items-center gap-1.5 shadow-md active:scale-95 ${
+            aria-label={isGpsActive ? 'Deactivate field GPS tracking' : 'Activate field GPS tracking'}
+            aria-pressed={isGpsActive}
+            className={`px-3 py-1.5 rounded-xl border text-xs font-mono-tech transition flex items-center gap-1.5 shadow-md active:scale-95 focus-visible:ring-2 focus-visible:ring-blue-400 focus:outline-none ${
               isGpsActive
                 ? 'bg-blue-600 border-blue-400 text-white font-bold animate-pulse shadow-blue-900/60'
                 : 'bg-stone-900/80 border-stone-700 text-stone-300 hover:text-white'
@@ -402,7 +404,8 @@ export default function App() {
               playAudioFeedback('lock');
               downloadGPXFile(targets);
             }}
-            className="px-3 py-1.5 rounded-xl bg-emerald-950/80 hover:bg-emerald-900/80 border border-emerald-600/50 text-xs font-mono-tech text-emerald-300 transition flex items-center gap-1.5 shadow-md active:scale-95"
+            aria-label="Export confirmed target locations to GPX file"
+            className="px-3 py-1.5 rounded-xl bg-emerald-950/80 hover:bg-emerald-900/80 border border-emerald-600/50 text-xs font-mono-tech text-emerald-300 transition flex items-center gap-1.5 shadow-md active:scale-95 focus-visible:ring-2 focus-visible:ring-emerald-400 focus:outline-none"
             title="Export confirmed sites to GPX for onX Hunt / Gaia GPS"
           >
             <Share2 className="w-3.5 h-3.5 text-emerald-400" />
