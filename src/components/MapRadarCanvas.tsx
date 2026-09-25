@@ -288,7 +288,9 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
               playAudioFeedback('peel');
               onPeelChange(0);
             }}
-            className={`px-2 py-1 rounded-lg text-[10px] font-mono-tech transition ${
+            aria-label="Set canopy peel to Pure LiDAR (100% elevation relief)"
+            aria-pressed={peelPercent === 0}
+            className={`px-2 py-1 rounded-lg text-[10px] font-mono-tech transition focus-visible:ring-2 focus-visible:ring-cyan-400 focus:outline-none ${
               peelPercent === 0 ? 'bg-cyan-600 text-white font-bold' : 'text-stone-300 hover:bg-white/10'
             }`}
           >
@@ -299,7 +301,9 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
               playAudioFeedback('peel');
               onPeelChange(50);
             }}
-            className={`px-2 py-1 rounded-lg text-[10px] font-mono-tech transition ${
+            aria-label="Set canopy peel to 50% LiDAR and 50% satellite canopy"
+            aria-pressed={peelPercent === 50}
+            className={`px-2 py-1 rounded-lg text-[10px] font-mono-tech transition focus-visible:ring-2 focus-visible:ring-emerald-400 focus:outline-none ${
               peelPercent === 50 ? 'bg-emerald-600 text-white font-bold' : 'text-stone-300 hover:bg-white/10'
             }`}
           >
@@ -310,7 +314,9 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
               playAudioFeedback('peel');
               onPeelChange(100);
             }}
-            className={`px-2 py-1 rounded-lg text-[10px] font-mono-tech transition ${
+            aria-label="Set canopy peel to 100% satellite imagery"
+            aria-pressed={peelPercent === 100}
+            className={`px-2 py-1 rounded-lg text-[10px] font-mono-tech transition focus-visible:ring-2 focus-visible:ring-emerald-400 focus:outline-none ${
               peelPercent === 100 ? 'bg-emerald-800 text-white font-bold' : 'text-stone-300 hover:bg-white/10'
             }`}
           >
