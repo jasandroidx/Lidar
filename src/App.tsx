@@ -77,8 +77,8 @@ export default function App() {
     }
   }, [gridTiles]);
 
-  // Queue a grid tile next handler
-  const handleQueueGridTile = (tileId: string) => {
+  // Queue a grid tile next handler (memoized to keep props stable)
+  const handleQueueGridTile = useCallback((tileId: string) => {
     setGridTiles((prev) =>
       prev.map((tile) => {
         if (tile.id === tileId) {
@@ -91,7 +91,7 @@ export default function App() {
         return tile;
       })
     );
-  };
+  }, []);
 
   // Selected marker state
   const [selectedTarget, setSelectedTarget] = useState<TerrainTarget | null>(null);
@@ -276,33 +276,44 @@ export default function App() {
     }
   };
 
-  // Toggle Live GPS
-  const handleToggleGps = () => {
-    if (!isGpsActive) {
-      playAudioFeedback('ping');
-      triggerHaptic([30, 30]);
-      setIsGpsActive(true);
-      // Set initial GPS location if not set
-      if (!userGps) {
-        setUserGps({
-          latitude: 38.3871,
-          longitude: -87.2162,
-          headingDeg: 45,
-          timestamp: Date.now()
-        });
+  // Toggle Live GPS (memoized to prevent MapRadarCanvas re-renders)
+  const handleToggleGps = useCallback(() => {
+    setIsGpsActive((prevActive) => {
+      if (!prevActive) {
+        playAudioFeedback('ping');
+        triggerHaptic([30, 30]);
+        setUserGps((prevGps) =>
+          prevGps || {
+            latitude: 38.3871,
+            longitude: -87.2162,
+            headingDeg: 45,
+            timestamp: Date.now()
+          }
+        );
+        return true;
+      } else {
+        playAudioFeedback('lock');
+        setIsSimulatingWalk(false);
+        return false;
       }
-    } else {
-      playAudioFeedback('lock');
-      setIsGpsActive(false);
-      setIsSimulatingWalk(false);
-    }
-  };
+    });
+  }, []);
 
-  // Target selection handler
-  const handleSelectTarget = (target: TerrainTarget) => {
+  // Target selection handler (memoized to keep MapRadarCanvas callbacks stable)
+  const handleSelectTarget = useCallback((target: TerrainTarget) => {
     setSelectedTarget(target);
     setIsPopupOpen(true);
-  };
+  }, []);
+
+  // Field walk simulation toggle (memoized)
+  const handleToggleSimulateWalk = useCallback(() => {
+    setIsSimulatingWalk((prev) => !prev);
+  }, []);
+
+  // Breadcrumb addition handler (memoized)
+  const handleAddBreadcrumb = useCallback((pt: FootstepBreadcrumb) => {
+    setBreadcrumbs((prev) => [...prev, pt]);
+  }, []);
 
   // Filtered candidate list for sidebar & navigation (stable array reference across GPS ticks)
   const filteredTargets = useMemo(() => {
@@ -446,9 +457,9 @@ export default function App() {
           lidarShader={lidarShader}
           onShaderChange={setLidarShader}
           breadcrumbs={breadcrumbs}
-          onAddBreadcrumb={(pt) => setBreadcrumbs((prev) => [...prev, pt])}
+          onAddBreadcrumb={handleAddBreadcrumb}
           isSimulatingWalk={isSimulatingWalk}
-          onToggleSimulateWalk={() => setIsSimulatingWalk(!isSimulatingWalk)}
+          onToggleSimulateWalk={handleToggleSimulateWalk}
           gridTiles={gridTiles}
           onQueueGridTile={handleQueueGridTile}
         />
