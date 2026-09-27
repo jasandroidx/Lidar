@@ -248,7 +248,8 @@ ${EARLY_ROAD_DISTANCES.map((r) => `- **${r.fromLocation}** ➔ **${r.toLocation}
                   placeholder="Filter pioneer families (e.g. Pride, Brenton, Miley)..."
                   value={badgeFilter}
                   onChange={(e) => setBadgeFilter(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 rounded-xl bg-stone-900 border border-emerald-900/60 text-xs font-mono-tech text-stone-100 focus:outline-none focus:border-emerald-400"
+                  aria-label="Filter pioneer family badges by name or township"
+                  className="w-full pl-9 pr-4 py-2 rounded-xl bg-stone-900 border border-emerald-900/60 text-xs font-mono-tech text-stone-100 focus:outline-none focus:border-emerald-400 focus-visible:ring-2 focus-visible:ring-emerald-400"
                 />
               </div>
 
