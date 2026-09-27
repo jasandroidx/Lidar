@@ -150,14 +150,15 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
     }
   }, [peelPercent]);
 
-  // 2. Render Target Markers & Homestead Compound Convex Hulls
+  // 2. Render Homestead Compound Convex Hulls
+  // Bolt Optimization: Decouple hull layer updates from selectedTarget object reference.
+  // Hulls only depend on candidate target coordinates, preventing costly polygon
+  // recalculation and teardowns during high-frequency GPS position updates.
   useEffect(() => {
     const map = mapRef.current;
-    const markersGroup = markersGroupRef.current;
     const hullsGroup = hullsGroupRef.current;
-    if (!map || !markersGroup || !hullsGroup) return;
+    if (!map || !hullsGroup) return;
 
-    markersGroup.clearLayers();
     hullsGroup.clearLayers();
 
     // Group targets into Homestead Clusters (for compound hulls)
@@ -182,17 +183,25 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
         hullsGroup.addLayer(hull);
       }
     });
-  }, [targets, selectedTarget, onSelectTarget]);
-
+  }, [targets]);
 
   // 2b. Render individual Candidate Circle Markers
+  // Bolt Optimization: Depend on selectedTarget?.id (selectedTargetId) instead of the
+  // full selectedTarget object reference. The selectedTarget object reference is updated with new
+  // distance/bearing metrics on every GPS position tick (~1-2Hz), which previously caused full
+  // Leaflet marker layer teardowns and re-creations on every tick when a target was selected.
+  const selectedTargetId = selectedTarget?.id;
+
   useEffect(() => {
     const map = mapRef.current;
     const markersGroup = markersGroupRef.current;
     if (!map || !markersGroup) return;
+
+    markersGroup.clearLayers();
+
     // Render individual Candidate Circle Markers with multi-attribute styling
     targets.forEach((t) => {
-      const isSelected = selectedTarget?.id === t.id;
+      const isSelected = selectedTargetId === t.id;
 
       let color = '#38bdf8'; // unverified cyan
       let fillColor = '#0284c7';
@@ -229,7 +238,7 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
 
       markersGroup.addLayer(circle);
     });
-  }, [targets, selectedTarget, onSelectTarget]);
+  }, [targets, selectedTargetId, onSelectTarget]);
 
   // 3. Render Live User GPS Marker
   useEffect(() => {
