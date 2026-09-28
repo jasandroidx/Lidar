@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   BookOpen,
@@ -42,6 +42,18 @@ export const ChronicleDrawer: React.FC<ChronicleDrawerProps> = ({
   const [selectedAct, setSelectedAct] = useState<'I' | 'II' | 'III'>('I');
   const [badgeFilter, setBadgeFilter] = useState('');
   const [copiedAllMarkdown, setCopiedAllMarkdown] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        playAudioFeedback('lock');
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -125,7 +137,8 @@ ${EARLY_ROAD_DISTANCES.map((r) => `- **${r.fromLocation}** ➔ **${r.toLocation}
               playAudioFeedback('lock');
               onClose();
             }}
-            className="p-1.5 text-stone-400 hover:text-white rounded-lg hover:bg-white/10 transition"
+            aria-label="Close Chronicle drawer"
+            className="p-1.5 text-stone-400 hover:text-white rounded-lg hover:bg-white/10 transition focus-visible:ring-2 focus-visible:ring-amber-400 focus:outline-none"
           >
             <X className="w-5 h-5" />
           </button>
