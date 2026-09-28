@@ -154,29 +154,23 @@ export default function App() {
     []
   );
 
-  // Compute targets with updated distance and bearing relative to user GPS without mutating base state or triggering localStorage thrashing
-  const targetsWithDistance = useMemo(() => {
-    if (!userGps) return targets;
-    return targets.map((t) => {
-      const { distance, bearing } = calculateDistanceAndBearing(
-        userGps.latitude,
-        userGps.longitude,
-        t.latitude,
-        t.longitude
-      );
-      return {
-        ...t,
-        distanceMeters: distance,
-        bearingDeg: bearing
-      };
-    });
-  }, [targets, userGps, calculateDistanceAndBearing]);
-
-  // Derived selected target with current distance/bearing
+  // Performance optimization: Calculate distance/bearing only for the selected target on GPS updates
+  // rather than re-mapping all targets on every 1-2Hz GPS position tick.
   const selectedTargetWithDistance = useMemo(() => {
     if (!selectedTarget) return null;
-    return targetsWithDistance.find((t) => t.id === selectedTarget.id) || selectedTarget;
-  }, [selectedTarget, targetsWithDistance]);
+    if (!userGps) return selectedTarget;
+    const { distance, bearing } = calculateDistanceAndBearing(
+      userGps.latitude,
+      userGps.longitude,
+      selectedTarget.latitude,
+      selectedTarget.longitude
+    );
+    return {
+      ...selectedTarget,
+      distanceMeters: distance,
+      bearingDeg: bearing
+    };
+  }, [selectedTarget, userGps, calculateDistanceAndBearing]);
 
   // Handle Real Device Geolocation API
   useEffect(() => {
@@ -436,7 +430,7 @@ export default function App() {
       <main className="relative flex-1 w-full h-full overflow-hidden">
         <MapRadarCanvas
           targets={filteredTargets}
-          selectedTarget={selectedTargetWithDistance}
+          selectedTarget={selectedTarget}
           onSelectTarget={handleSelectTarget}
           userGps={userGps}
           isGpsActive={isGpsActive}
