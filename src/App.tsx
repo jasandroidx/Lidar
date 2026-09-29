@@ -78,7 +78,7 @@ export default function App() {
   }, [gridTiles]);
 
   // Queue a grid tile next handler
-  const handleQueueGridTile = (tileId: string) => {
+  const handleQueueGridTile = useCallback((tileId: string) => {
     setGridTiles((prev) =>
       prev.map((tile) => {
         if (tile.id === tileId) {
@@ -91,7 +91,7 @@ export default function App() {
         return tile;
       })
     );
-  };
+  }, []);
 
   // Selected marker state
   const [selectedTarget, setSelectedTarget] = useState<TerrainTarget | null>(null);
@@ -267,42 +267,42 @@ export default function App() {
   }, [isSimulatingWalk]);
 
   // Handle status changes (Confirm, Walkover, Reject)
-  const handleStatusChange = (id: string, status: VerificationStatus) => {
+  const handleStatusChange = useCallback((id: string, status: VerificationStatus) => {
     setTargets((prev) =>
       prev.map((t) => (t.id === id ? { ...t, verificationStatus: status } : t))
     );
-    if (selectedTarget && selectedTarget.id === id) {
-      setSelectedTarget((prev) => (prev ? { ...prev, verificationStatus: status } : null));
-    }
-  };
+    setSelectedTarget((prev) => (prev && prev.id === id ? { ...prev, verificationStatus: status } : prev));
+  }, []);
 
   // Toggle Live GPS
-  const handleToggleGps = () => {
-    if (!isGpsActive) {
-      playAudioFeedback('ping');
-      triggerHaptic([30, 30]);
-      setIsGpsActive(true);
-      // Set initial GPS location if not set
-      if (!userGps) {
-        setUserGps({
-          latitude: 38.3871,
-          longitude: -87.2162,
-          headingDeg: 45,
-          timestamp: Date.now()
-        });
+  const handleToggleGps = useCallback(() => {
+    setIsGpsActive((prevIsGpsActive) => {
+      const nextActive = !prevIsGpsActive;
+      if (nextActive) {
+        playAudioFeedback('ping');
+        triggerHaptic([30, 30]);
+      } else {
+        playAudioFeedback('lock');
+        setIsSimulatingWalk(false);
       }
-    } else {
-      playAudioFeedback('lock');
-      setIsGpsActive(false);
-      setIsSimulatingWalk(false);
-    }
-  };
+      return nextActive;
+    });
+
+    setUserGps((prevGps) =>
+      prevGps || {
+        latitude: 38.3871,
+        longitude: -87.2162,
+        headingDeg: 45,
+        timestamp: Date.now()
+      }
+    );
+  }, []);
 
   // Target selection handler
-  const handleSelectTarget = (target: TerrainTarget) => {
+  const handleSelectTarget = useCallback((target: TerrainTarget) => {
     setSelectedTarget(target);
     setIsPopupOpen(true);
-  };
+  }, []);
 
   // Filtered candidate list for sidebar & navigation (stable array reference across GPS ticks)
   const filteredTargets = useMemo(() => {
