@@ -15,7 +15,8 @@ export const PWAInstallButton: React.FC = () => {
       <button
         id="btn-pwa-install"
         onClick={install}
-        className="flex items-center gap-2 rounded-lg bg-emerald-700/80 hover:bg-emerald-600 border border-emerald-500/40 px-3 py-1.5 text-xs font-mono-tech tracking-wider text-emerald-100 shadow-md transition active:scale-95"
+        aria-label="Install Pike Terrain Radar as Native PWA"
+        className="flex items-center gap-2 rounded-lg bg-emerald-700/80 hover:bg-emerald-600 border border-emerald-500/40 px-3 py-1.5 text-xs font-mono-tech tracking-wider text-emerald-100 shadow-md transition active:scale-95 focus-visible:ring-2 focus-visible:ring-emerald-400 focus:outline-none"
         title="Install Pike Terrain Radar as Native PWA"
       >
         <Download className="w-3.5 h-3.5" />
@@ -30,7 +31,8 @@ export const PWAInstallButton: React.FC = () => {
         <button
           id="btn-pwa-install-ios"
           onClick={() => setShowIOSGuide(true)}
-          className="flex items-center gap-1.5 rounded-lg bg-stone-800/80 hover:bg-stone-700 border border-stone-600/50 px-2.5 py-1.5 text-xs font-mono-tech text-stone-200 shadow-sm transition active:scale-95"
+          aria-label="Install Pike Terrain Radar on iOS Safari"
+          className="flex items-center gap-1.5 rounded-lg bg-stone-800/80 hover:bg-stone-700 border border-stone-600/50 px-2.5 py-1.5 text-xs font-mono-tech text-stone-200 shadow-sm transition active:scale-95 focus-visible:ring-2 focus-visible:ring-emerald-400 focus:outline-none"
           title="Install on iOS Safari"
         >
           <Smartphone className="w-3.5 h-3.5 text-amber-400" />
@@ -46,7 +48,8 @@ export const PWAInstallButton: React.FC = () => {
                 </h3>
                 <button
                   onClick={() => setShowIOSGuide(false)}
-                  className="p-1 text-stone-400 hover:text-white rounded-lg"
+                  aria-label="Close iOS installation instructions"
+                  className="p-1 text-stone-400 hover:text-white rounded-lg focus-visible:ring-2 focus-visible:ring-emerald-400 focus:outline-none"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -67,7 +70,8 @@ export const PWAInstallButton: React.FC = () => {
               </div>
               <button
                 onClick={() => setShowIOSGuide(false)}
-                className="mt-5 w-full rounded-lg bg-emerald-600/90 py-2.5 text-xs font-semibold tracking-wider text-white hover:bg-emerald-500 transition"
+                aria-label="Close iOS installation guide"
+                className="mt-5 w-full rounded-lg bg-emerald-600/90 py-2.5 text-xs font-semibold tracking-wider text-white hover:bg-emerald-500 transition focus-visible:ring-2 focus-visible:ring-emerald-400 focus:outline-none"
               >
                 GOT IT
               </button>
