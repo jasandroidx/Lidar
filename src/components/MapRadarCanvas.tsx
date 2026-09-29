@@ -150,14 +150,15 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
     }
   }, [peelPercent]);
 
-  // 2. Render Target Markers & Homestead Compound Convex Hulls
+  // Extract target ID primitive so effects do not re-run on high-frequency GPS distance/bearing updates
+  const selectedTargetId = selectedTarget?.id;
+
+  // 2. Render Homestead Compound Convex Hulls (depends only on targets)
   useEffect(() => {
     const map = mapRef.current;
-    const markersGroup = markersGroupRef.current;
     const hullsGroup = hullsGroupRef.current;
-    if (!map || !markersGroup || !hullsGroup) return;
+    if (!map || !hullsGroup) return;
 
-    markersGroup.clearLayers();
     hullsGroup.clearLayers();
 
     // Group targets into Homestead Clusters (for compound hulls)
@@ -182,17 +183,21 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
         hullsGroup.addLayer(hull);
       }
     });
-  }, [targets, selectedTarget, onSelectTarget]);
-
+  }, [targets]);
 
   // 2b. Render individual Candidate Circle Markers
+  // Bolt Optimization: Depend on selectedTargetId primitive rather than mutating selectedTarget object reference.
+  // This prevents tearing down and re-creating Leaflet markers on every 1-2Hz GPS position tick.
   useEffect(() => {
     const map = mapRef.current;
     const markersGroup = markersGroupRef.current;
     if (!map || !markersGroup) return;
+
+    markersGroup.clearLayers();
+
     // Render individual Candidate Circle Markers with multi-attribute styling
     targets.forEach((t) => {
-      const isSelected = selectedTarget?.id === t.id;
+      const isSelected = selectedTargetId === t.id;
 
       let color = '#38bdf8'; // unverified cyan
       let fillColor = '#0284c7';
@@ -229,7 +234,7 @@ export const MapRadarCanvas: React.FC<MapRadarCanvasProps> = ({
 
       markersGroup.addLayer(circle);
     });
-  }, [targets, selectedTarget, onSelectTarget]);
+  }, [targets, selectedTargetId, onSelectTarget]);
 
   // 3. Render Live User GPS Marker
   useEffect(() => {
